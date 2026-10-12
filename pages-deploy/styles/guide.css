@@ -1,0 +1,30 @@
+
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.75; color: #1f2937; background: #fafafa; margin: 0; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; }
+    nav.top { padding: 16px 20px; max-width: 720px; margin: 0 auto; }
+    nav.top a { color: #2563eb; text-decoration: none; font-size: 14px; }
+    h1 { font-size: 32px; line-height: 1.3; margin: 24px 0 8px; }
+    .lede { font-size: 18px; color: #4b5563; margin: 0 0 32px; }
+    .meta { font-size: 13px; color: #9ca3af; margin-bottom: 32px; }
+    h2 { font-size: 22px; margin: 40px 0 16px; }
+    ol.checklist { list-style: none; padding: 0; counter-reset: item; }
+    ol.checklist li { counter-increment: item; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 20px 20px 64px; margin-bottom: 16px; position: relative; }
+    ol.checklist li::before { content: counter(item); position: absolute; left: 20px; top: 20px; width: 28px; height: 28px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    ol.checklist li strong { display: block; margin-bottom: 6px; font-size: 16px; }
+    ol.checklist li p { margin: 0; font-size: 15px; color: #4b5563; }
+    .faq h3 { font-size: 17px; margin: 24px 0 8px; }
+    .faq p { margin: 0 0 8px; color: #4b5563; font-size: 15px; }
+    .cta { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 40px 0; text-align: center; }
+    .cta p { margin: 0 0 16px; font-size: 16px; }
+    .cta a { display: inline-block; background: #2563eb; color: #fff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+    footer { max-width: 720px; margin: 0 auto; padding: 24px 20px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #9ca3af; }
+    footer a { color: #6b7280; }
+  
+main { display: block; }
+a { overflow-wrap: anywhere; }
+.answer-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px 22px; margin:0 0 32px; }
+.answer-box p { margin:0; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { padding:12px; border-bottom:1px solid #e5e7eb; text-align:left; vertical-align:top; }
+code { overflow-wrap:anywhere; }
