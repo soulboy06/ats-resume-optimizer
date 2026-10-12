@@ -43,5 +43,18 @@ commit; never commit secrets (`.gitignore` covers the usual suspects).
   JD keyword coverage 60% + plain-text parsability 40%.
 - No login / paywall by decision (2026-10-11). Do not reintroduce paid UI
   without the owner's go-ahead.
-- The UI theme is the light-blue "fresh" design the owner picked (2026-10-11).
+- The UI uses the owner-approved Craft-inspired editorial design: warm cream
+  graph paper, terracotta accents, serif headings, and frosted glass components
+  (2026-10-12). Keep decorative imagery and colored background blobs out of the UI.
   Visual changes go through the owner first — no unprompted redesigns on main.
+
+## Local preview
+
+Serve `pages-deploy/` with any static HTTP server, for example:
+
+```bash
+python -m http.server 4174 --bind 127.0.0.1 --directory pages-deploy
+```
+
+The real scoring and PDF import run in the browser. AI review, rewrite, email,
+and feedback continue to use the existing Cloudflare Worker.
