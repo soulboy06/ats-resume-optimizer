@@ -725,9 +725,18 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         dictHits.sort(function(a,b){return b.count-a.count;});
         var keywords=dictHits.slice(0,40), seen={}, i;
         for(i=0;i<keywords.length;i++) seen[keywords[i].key]=1;
+        function isSubKeyword(shortKey,longKey){
+          if(/[\u3400-\u9fff]/.test(shortKey)) return longKey.indexOf(shortKey)!==-1;
+          return (' '+longKey+' ').indexOf(' '+shortKey+' ')!==-1;
+        }
         if(keywords.length<5){
           extractKeywordsStatistical(text,isChinese).forEach(function(s){
-            if(!seen[s.key]&&keywords.length<32){seen[s.key]=1;keywords.push(s);}
+            if(seen[s.key]||keywords.length>=32) return;
+            var sub=false,k;
+            for(k=0;k<keywords.length;k++){
+              if(isSubKeyword(s.key,keywords[k].key)){sub=true;break;}
+            }
+            if(!sub){seen[s.key]=1;keywords.push(s);}
           });
         }
         return keywords;
