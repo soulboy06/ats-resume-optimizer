@@ -384,7 +384,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
 
       var i18n = {
         en: {
-          previewKeywords:'Keyword alignment', previewParsing:'Text parseability', heroCapabilitiesAria:'What you can do', heroFeatureOne:'Find keyword gaps', heroFeatureTwo:'Get an AI review', heroFeatureThree:'Refine your story', heroLocal:'Free to use · No account needed', previewTitle:'A little more aligned.', previewCopy:'Small changes. A stronger first impression.', previewExample:'Illustrative score · Your report uses your own documents', resumeHint:'Paste text or import a text-based PDF', jobHint:'The more specific the role, the better the match', reportTitle:'A clearer next step.', reportCopy:'See where you align, and where a few thoughtful changes can help.', editMaterials:'Edit documents', parseMetricNote:'Four checks of your plain text', parseChecksTitle:'A clean, readable resume.', keywordDetailsTitle:'The words that connect you.',
+          previewKeywords:'Keyword alignment', previewParsing:'Text parseability', heroCapabilitiesAria:'What you can do', heroFeatureOne:'Find keyword gaps', heroFeatureTwo:'Get an AI review', heroFeatureThree:'Refine your story', heroLocal:'Free to use · No account needed', previewTitle:'A little more aligned.', previewCopy:'Small changes. A stronger first impression.', previewExample:'Illustrative score · Your report uses your own documents', resumeHint:'Paste text or import a text-based PDF', jobHint:'The more specific the role, the better the match', reportTitle:'A clearer next step.', reportCopy:'See where you align, and where a few thoughtful changes can help.', editMaterials:'Edit documents', parseMetricNote:'Four checks of your plain text', parseChecksTitle:'A clean, readable resume.', keywordDetailsTitle:'The words that connect you.', keywordDictNote:'Skill keywords come from a 13,000+ cross-occupation skills dictionary; generic filler words are excluded.',
           title:'Free ATS Resume Checker | AI Resume Optimizer', navAria:'Main navigation', homeAria:'ScoreMyResume home', languageAria:'Language',
           navAnalyzer:'Analyzer', navHow:'How it works', navCta:'Check my resume',
           heroKicker:'A LITTLE CLARITY. A NEW CHAPTER.', heroTitle:'Let your experience<br><span>be seen.</span>',
@@ -413,7 +413,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           sectionSummary:'Summary', sectionExperience:'Experience', sectionEducation:'Education', sectionSkills:'Skills'
         },
         zh: {
-          previewKeywords:'岗位关键词匹配', previewParsing:'文本可解析性', heroCapabilitiesAria:'你可以获得的帮助', heroFeatureOne:'发现关键词缺口', heroFeatureTwo:'获得 AI 深度点评', heroFeatureThree:'优化经历表达', heroLocal:'免费使用 · 无需注册', previewTitle:'离心仪岗位，再近一点', previewCopy:'一点调整，让好经历更有说服力。', previewExample:'示意评分 · 实际报告将根据你的材料生成', resumeHint:'支持粘贴文本或导入文字版 PDF', jobHint:'职位描述越具体，匹配建议越准确', reportTitle:'看见你的下一步。', reportCopy:'找到已经契合的优势，也找到值得调整的地方。', editMaterials:'修改材料', parseMetricNote:'基于纯文本的四项基础检查', parseChecksTitle:'让简历更容易被读取', keywordDetailsTitle:'让经历与岗位连接的词。',
+          previewKeywords:'岗位关键词匹配', previewParsing:'文本可解析性', heroCapabilitiesAria:'你可以获得的帮助', heroFeatureOne:'发现关键词缺口', heroFeatureTwo:'获得 AI 深度点评', heroFeatureThree:'优化经历表达', heroLocal:'免费使用 · 无需注册', previewTitle:'离心仪岗位，再近一点', previewCopy:'一点调整，让好经历更有说服力。', previewExample:'示意评分 · 实际报告将根据你的材料生成', resumeHint:'支持粘贴文本或导入文字版 PDF', jobHint:'职位描述越具体，匹配建议越准确', reportTitle:'看见你的下一步。', reportCopy:'找到已经契合的优势，也找到值得调整的地方。', editMaterials:'修改材料', parseMetricNote:'基于纯文本的四项基础检查', parseChecksTitle:'让简历更容易被读取', keywordDetailsTitle:'让经历与岗位连接的词。', keywordDictNote:'技能关键词来自 13,000+ 全职业技能词典，通用虚词已排除。',
           title:'Free ATS Resume Checker | AI Resume Optimizer', navAria:'主导航', homeAria:'ScoreMyResume 首页', languageAria:'语言选择',
           navAnalyzer:'简历分析', navHow:'工作原理', navCta:'检测简历',
           heroKicker:'A LITTLE CLARITY. A NEW CHAPTER.', heroTitle:'让你的经历，<br><span>被看见。</span>',
@@ -540,7 +540,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       });
 
       var stopwords = new Set('a an and are as at be been being but by can could did do does doing for from had has have having he her hers him his how i if in into is it its itself just may me might more most must my no nor not of off on once only or other our ours out over own same she should so some such than that the their theirs them then there these they this those through to too under up very was we were what when where which while who why will with would you your yours about above after again against all am any because before below between both during each few further here itself now s t don should ve ll re company role team work working looking including using use used plus per responsibilities responsibility requirements requirement qualifications qualification preferred preference candidate candidates ideal join joining fast paced dynamic environment opportunity opportunities position duties duty nice bonus seeking successful applicant applicants employer employment culture values we our us years year experience experienced strong excellent good great'.split(/\s+/));
-      var chineseStopwords = new Set(['负责','具备','良好','优先','能力','经验','团队','沟通','熟悉','了解','掌握','加分','要求','岗位','职责','任职','以上','相关','进行','包括','以及','通过','能够','我们','你将','工作','职位','公司','业务','场景','核心','使用','实现','提升','推动']);
+      var chineseStopwords = new Set(['负责','具备','良好','优先','能力','经验','团队','沟通','熟悉','了解','掌握','加分','要求','岗位','职责','任职','以上','相关','进行','包括','以及','通过','能够','我们','你将','工作','职位','公司','业务','场景','核心','使用','实现','提升','推动','参与','学习','管理','系统','技术','开发','应用','工程','数据','方案','基础','环境','积累','实战','计算','模型','任务','配合','协助','支持','维护','优化','设计','测试','部署','文档','汇报','协调','落地','推进','闭环','抓手','方法论','复盘','对齐','颗粒度','思维','逻辑','创新','主动','积极','热情','耐心','细心','抗压','执行力','责任心','解决问题','待遇','薪资','福利','发展','平台','机会','氛围','优先考虑','能力强','上下文','并发']);
       var weakPatterns = [
         { regex:/\bresponsible for\b/ig, replace:'Led', title:'weakResponsible', tip:'weakResponsibleTip' },
         { regex:/\bhelped\b/ig, replace:'Supported', title:'weakHelped', tip:'weakHelpedTip' },
@@ -629,7 +629,79 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         return units;
       }
 
-      function extractKeywords(text,isChinese) {
+      /* ---- cross-occupation skills dictionary (v1: ESCO-based, transversal soft
+         skills excluded). JD keywords are matched against this dictionary first;
+         the old frequency ranking is kept only as a fallback when dictionary
+         coverage is thin (e.g. dictionary not loaded yet). ---- */
+      var skillsDictLatin=null, skillsDictCjk=null, skillsDictPromise=null;
+      function dictTokenKey(term){
+        var toks=(String(term||'').toLowerCase().match(/[a-z][a-z0-9+#]*(?:[.\/-][a-z0-9+#]+)*/g)||[]);
+        return toks.join(' ');
+      }
+      function loadSkillsDict(){
+        if(skillsDictLatin) return Promise.resolve(true);
+        if(skillsDictPromise) return skillsDictPromise;
+        skillsDictPromise=fetch('/skills-dict.json').then(function(r){
+          if(!r.ok) throw new Error('dict http '+r.status);
+          return r.json();
+        }).then(function(d){
+          var latin={}, cjk={};
+          (d.terms||[]).forEach(function(term){
+            var key=dictTokenKey(term);
+            if(key&&!latin[key]) latin[key]=term;
+          });
+          Object.keys(d.zh||{}).forEach(function(en){
+            var zh=d.zh[en];
+            var key=String(zh||'').replace(/\s+/g,'');
+            if(key&&!cjk[key]&&!chineseStopwords.has(key)) cjk[key]=zh;
+          });
+          skillsDictLatin=latin; skillsDictCjk=cjk;
+          return true;
+        }).catch(function(){ skillsDictPromise=null; return false; });
+        return skillsDictPromise;
+      }
+      loadSkillsDict();
+      function matchDictSkills(text){
+        if(!skillsDictLatin) return [];
+        var hits={};
+        var tokens=(String(text||'').toLowerCase().match(/[a-z][a-z0-9+#]*(?:[.\/-][a-z0-9+#]+)*/g)||[]);
+        var MAXN=5,i,n,phrase,disp,key;
+        for(i=0;i<tokens.length;i++){
+          for(n=Math.min(MAXN,tokens.length-i);n>=1;n--){
+            phrase=tokens.slice(i,i+n).join(' ');
+            disp=skillsDictLatin[phrase];
+            if(disp){
+              key=normalizeExactText(disp);
+              if(!hits[key]) hits[key]={key:key,term:disp,count:0};
+              hits[key].count++;
+              break;
+            }
+          }
+        }
+        if(skillsDictCjk&&typeof Intl!=='undefined'&&Intl.Segmenter){
+          var segs=[],j,m;
+          try{
+            var segmenter=new Intl.Segmenter('zh',{granularity:'word'});
+            Array.from(segmenter.segment(String(text||''))).forEach(function(it){
+              if(it.isWordLike){var s=it.segment.replace(/\s+/g,'');if(s)segs.push(s);}
+            });
+          }catch(e){segs=[];}
+          for(j=0;j<segs.length;j++){
+            for(m=Math.min(2,segs.length-j);m>=1;m--){
+              var cjkPhrase=segs.slice(j,j+m).join('');
+              var cjkDisp=skillsDictCjk[cjkPhrase];
+              if(cjkDisp){
+                var cjkKey=normalizeExactText(cjkDisp);
+                if(!hits[cjkKey]) hits[cjkKey]={key:cjkKey,term:cjkDisp,count:0};
+                hits[cjkKey].count++;
+                break;
+              }
+            }
+          }
+        }
+        return Object.keys(hits).map(function(k){return hits[k];});
+      }
+      function extractKeywordsStatistical(text,isChinese) {
         var candidates={};
         segmentJdWords(text,isChinese).forEach(function(raw){
           var term=String(raw||'').trim();
@@ -647,6 +719,18 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           item.rank=item.count*3+(technical?1.5:0)+Math.min(item.term.length/20,.8);
           return item;
         }).sort(function(a,b){return b.rank-a.rank;}).slice(0,isChinese?32:28);
+      }
+      function extractKeywords(text,isChinese) {
+        var dictHits=matchDictSkills(text);
+        dictHits.sort(function(a,b){return b.count-a.count;});
+        var keywords=dictHits.slice(0,40), seen={}, i;
+        for(i=0;i<keywords.length;i++) seen[keywords[i].key]=1;
+        if(keywords.length<5){
+          extractKeywordsStatistical(text,isChinese).forEach(function(s){
+            if(!seen[s.key]&&keywords.length<32){seen[s.key]=1;keywords.push(s);}
+          });
+        }
+        return keywords;
       }
 
       function scoreParseability(text){
@@ -956,7 +1040,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           }).join('')+'</div><p class="parseability-tip">'+esc(t('parseabilityTip'))+'</p></aside>';
         }
         function atsLensMarkup(){
-          return '<div class="ats-layout glass"><div class="ats-score-summary"><h3 class="lens-label">'+esc(t('atsLens'))+'</h3><div class="lens-score-row"><div class="gauge lens-gauge"><div class="gauge-value"><strong data-target="'+data.atsScore+'" style="color:'+atsTone+'">'+(animate===false?data.atsScore:0)+'</strong><span>/ 100</span></div></div><span class="status-pill" style="color:'+atsTone+';background:color-mix(in srgb,'+atsTone+' 9%,transparent)">'+esc(atsVerdict.label)+'</span></div><p class="lens-note">'+esc(atsVerdict.note)+'</p></div><div class="summary-metrics">'+keywordMetricMarkup()+parseabilityMetricMarkup()+'</div></div><p class="simulation-label">'+esc(t('simulationLabel'))+' · '+esc(t('atsLensNote'))+'</p><div class="report-details"><div class="ats-keyword-column"><h3 class="report-subtitle">'+esc(t('keywordDetailsTitle'))+'</h3><div class="ats-keyword-groups"><section class="ats-keyword-group matched-group"><div class="ats-missing-head"><strong>'+esc(t('matchedKeywords'))+'</strong><span>'+esc(t('matchedCount',{matched:data.matched.length,total:data.keywords.length}))+'</span></div><div class="chip-list">'+matchedHtml+'</div></section><section class="ats-keyword-group missing-group"><div class="ats-missing-head"><strong>'+esc(t('missingKeywords'))+'</strong><span>'+data.missing.length+'</span></div><div class="chip-list">'+missingHtml+'</div></section></div></div>'+parseabilityChecksMarkup()+'</div>';
+          return '<div class="ats-layout glass"><div class="ats-score-summary"><h3 class="lens-label">'+esc(t('atsLens'))+'</h3><div class="lens-score-row"><div class="gauge lens-gauge"><div class="gauge-value"><strong data-target="'+data.atsScore+'" style="color:'+atsTone+'">'+(animate===false?data.atsScore:0)+'</strong><span>/ 100</span></div></div><span class="status-pill" style="color:'+atsTone+';background:color-mix(in srgb,'+atsTone+' 9%,transparent)">'+esc(atsVerdict.label)+'</span></div><p class="lens-note">'+esc(atsVerdict.note)+'</p></div><div class="summary-metrics">'+keywordMetricMarkup()+parseabilityMetricMarkup()+'</div></div><p class="simulation-label">'+esc(t('simulationLabel'))+' · '+esc(t('atsLensNote'))+'</p><div class="report-details"><div class="ats-keyword-column"><h3 class="report-subtitle">'+esc(t('keywordDetailsTitle'))+'</h3><div class="ats-keyword-groups"><section class="ats-keyword-group matched-group"><div class="ats-missing-head"><strong>'+esc(t('matchedKeywords'))+'</strong><span>'+esc(t('matchedCount',{matched:data.matched.length,total:data.keywords.length}))+'</span></div><div class="chip-list">'+matchedHtml+'</div></section><section class="ats-keyword-group missing-group"><div class="ats-missing-head"><strong>'+esc(t('missingKeywords'))+'</strong><span>'+data.missing.length+'</span></div><div class="chip-list">'+missingHtml+'</div></section></div><p class="dict-note">'+esc(t('keywordDictNote'))+'</p></div>'+parseabilityChecksMarkup()+'</div>';
         }
         var comparisonHtml=comparison?comparisonRowsMarkup(comparison):'';
         var historyHtml=scanHistory.length?'<div class="history-strip" id="scanHistory">'+scanHistory.map(function(item,i){return '<span class="history-item">'+esc(t('scanLabel',{count:i+1,score:item.ats}))+'</span>';}).join('')+'</div>':'';
