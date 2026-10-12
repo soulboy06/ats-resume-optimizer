@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How Our ATS Resume Score Works | CheckATS</title>
+  <meta name="description" content="Learn how CheckATS calculates keyword coverage and four text checks, what its score cannot measure, free AI limits, and where your resume is processed." />
+  <link rel="canonical" href="https://checkats.online/methodology/" />
+  <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles/guide.css" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="How Our ATS Resume Score Works | CheckATS" />
+  <meta property="og:description" content="Learn how CheckATS calculates keyword coverage and four text checks, what its score cannot measure, free AI limits, and where your resume is processed." />
+  <meta property="og:url" content="https://checkats.online/methodology/" />
+  <meta property="og:image" content="https://checkats.online/assets/og-card.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://checkats.online/assets/og-card.png" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "name": "How Our ATS Resume Score Works | CheckATS", "url": "https://checkats.online/methodology/", "description": "Learn how CheckATS calculates keyword coverage and four text checks, what its score cannot measure, free AI limits, and where your resume is processed."}</script>
+</head><body>
+  <nav class="top" aria-label="Main navigation"><a href="/">← CheckATS resume checker</a> · <a href="/guide/">Guides</a> · <a href="/methodology/">Scoring method</a></nav>
+  <main class="wrap">
+    <h1>How CheckATS scores your resume</h1>
+    <p class="meta">CheckATS · Updated October 13, 2026</p>
+    <div class="answer-box"><p><strong>The short answer:</strong> CheckATS calculates a simulated score as 60% selected job-description keyword coverage plus 40% extracted-text checks. It runs locally in your browser. Optional AI review is a separate writing assessment. The score is not an employer ATS score or a probability of being hired.</p></div>
+    <h2>What goes into the score?</h2>
+    <p><code>Simulated score = round(0.60 × keyword coverage + 0.40 × text-check score)</code></p>
+    <p>Keyword coverage is the rounded percentage of selected job-description terms found in the resume. Each selected term contributes equally; the tool does not infer which requirements an employer considers mandatory.</p>
+    <h2>How are job keywords selected and matched?</h2>
+    <p>The browser loads a cross-occupation skills dictionary, then selects up to 40 dictionary matches from the job description. If fewer than five are found, it supplements them with statistical word extraction, excluding common filler words. If the dictionary cannot load, this fallback can change the selected terms.</p>
+    <p>Resume matching ignores case, normalizes whitespace and long dashes, and checks Latin word boundaries. Chinese terms use direct substring matching. It does not expand synonyms, stem words, or map acronyms: <code>K8s</code> alone does not match <code>Kubernetes</code>, and <code>Amazon Web Services</code> alone does not match <code>AWS</code> in this tool. Repeating an already matched term does not raise coverage.</p>
+    <h2>The four extracted-text checks</h2>
+    <p>Each passing check adds 25 points to the text-check score, which contributes up to 40 points to the overall score.</p>
+    <table><thead><tr><th scope="col">Check</th><th scope="col">Current rule</th></tr></thead><tbody>
+      <tr><th scope="row">Contact</th><td>An email address is found. Phone detection is supplementary and does not determine whether this check passes.</td></tr>
+      <tr><th scope="row">Dates</th><td>At least two supported month dates, all in the same format: YYYY.MM, YYYY-MM, MM/YYYY, or Chinese year/month dates. English month names such as Jan 2024 are not recognized by this check.</td></tr>
+      <tr><th scope="row">Clean text</th><td>No replacement characters, at most two private-use characters, and no more than 5% other symbol characters after whitespace is removed.</td></tr>
+      <tr><th scope="row">Length</th><td>Between 300 and 3,000 non-whitespace Unicode characters. This heuristic does not determine an ideal page count or resume length for every role.</td></tr>
+    </tbody></table>
+    <h2>A worked example</h2>
+    <p>If the selected job terms are Python, SQL, Docker, Kubernetes, and AWS, and the resume contains the first three, keyword coverage is 3 ÷ 5 = 60%. Passing all four text checks gives 100%. The simulated score is <strong>round(0.60 × 60 + 0.40 × 100) = 76/100</strong>. These are illustrative inputs, not an employer benchmark.</p>
+    <h2>What this score cannot measure</h2>
+    <ul><li>Original PDF layout, columns, tables, section detection, or how an employer's parser reads them.</li><li>Scanned or image-only PDFs: CheckATS has no OCR. It accepts pasted text or text-based PDF imports, not DOCX uploads.</li><li>Employer screening questions, work authorization, hiring policies, or interview decisions.</li><li>Experience quality or verified accomplishments: these require human review. AI suggestions can be mistaken.</li></ul>
+    <p>For unchanged inputs and the same selected terms, the local score is deterministic. AI reviews and rewrites may vary and should be checked before use. Include missing terms only when they truthfully describe your experience.</p>
+    <h2>How is this different from Greenhouse or Workday?</h2>
+    <p>CheckATS is an independent preparation tool and is not affiliated with those vendors. ATS features and employer configurations vary. For example, <a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ">Greenhouse's Talent Matching FAQ</a> describes related-term matching and says that feature does not automatically reject or advance candidates. CheckATS does not reproduce that system or Workday's screening.</p>
+    <h2>Is it free?</h2>
+    <p>Local checks require no account and do not use the AI allowance. Standard AI limits are 5 review requests and 2 rewrite requests per IP per UTC day, resetting at 00:00 UTC. A shared network shares its IP allowance. Automatic review refreshes after a rewrite also consume review requests, and a failed request can consume an allowance.</p>
+    <h2>Where is my resume processed?</h2>
+    <ul><li><strong>Local checks and PDF extraction:</strong> run in this browser tab; the scoring code does not upload the resume for these operations.</li><li><strong>AI review:</strong> sends the resume and job description to the site's Cloudflare Worker, which uses Cloudflare Workers AI. The current review request uses up to 6,000 resume characters and up to 800 job-description characters.</li><li><strong>AI rewrite:</strong> sends the resume, job description, and missing terms to the Worker and DeepSeek. Review the returned text and highlighted changes; the prompt's instructions cannot guarantee factual accuracy.</li><li><strong>Email delivery:</strong> sends the recipient address and optimized resume to Resend when requested.</li><li><strong>Feedback:</strong> submissions may be stored, including contact details and IP address. Avoid including resume data in feedback unless you intend to submit it.</li></ul>
+    <p>The site's Worker uses IP-based request counters. Provider logging and retention are governed by their policies; local scoring does not establish a guarantee about external AI or email retention. The site also loads third-party fonts, a PDF library, and analytics.</p>
+    <h2>Sources and implementation</h2>
+    <p>The formula and limits above document the <a href="https://github.com/soulboy06/ats-resume-optimizer">CheckATS source repository</a>, specifically the local scoring code and AI Worker. See the Greenhouse source above for that vendor's feature. Product rules can change; this page describes the current implementation.</p>
+    <div class="cta"><p>Check the selected terms, then make accurate edits.</p><a href="/#analyzer">Try the free resume checker →</a></div>
+    <p><a href="/guide/ats-resume-checklist-software-engineers/">Software engineer resume checklist</a> · <a href="/guide/">All guides</a></p>
+</main>
+  <footer>CheckATS · <a href="/">Free ATS resume checker</a> · <a href="/guide/">Guides</a> · <a href="/methodology/">Scoring and data handling</a></footer>
+</body></html>

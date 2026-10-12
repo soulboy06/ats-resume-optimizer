@@ -1,4 +1,4 @@
-# ATS Resume Optimizer
+# CheckATS
 
 Free ATS resume checker + AI HR review for tech job seekers.
 Live: https://checkats.online
@@ -58,3 +58,9 @@ python -m http.server 4174 --bind 127.0.0.1 --directory pages-deploy
 
 The real scoring and PDF import run in the browser. AI review, rewrite, email,
 and feedback continue to use the existing Cloudflare Worker.
+
+## SEO and GEO checks
+
+Public pages use the CheckATS name, self-canonical URLs, crawlable guide links, and factual structured data. `/methodology/` documents the actual local score and external data processing. `llms.txt` is an optional summary, not a search inclusion requirement.
+
+Run `python3 scripts/verify-seo.py` and `node scripts/verify-scoring.cjs` before publishing. After deployment, submit the sitemap and inspect public URLs in Search Console and Bing Webmaster Tools. Confirm CDN crawler access and track tool usage from organic and AI referrals.

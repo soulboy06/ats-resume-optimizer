@@ -1,25 +1,21 @@
-# ATS Resume Optimizer
+# CheckATS
 
-> Free AI-powered ATS resume checker and optimizer for job seekers. Paste a resume and a job description to get a compatibility score, AI HR-style feedback, and a one-click rewrite tailored to the job post.
+> CheckATS is a free, independent ATS resume preparation tool at https://checkats.online/. Compare pasted resume text or a text-based PDF with a job description, then request optional AI feedback or a rewrite. No account required.
 
-## What it does
+## Main pages
 
-- **ATS compatibility score (simulated, not a real ATS score):** 60% JD exact-keyword coverage + 40% plain-text parseability (contact info extraction, date format consistency, encoding issues, reasonable length).
-- **AI HR-style review** across 4 dimensions: writing strength, quantification & results, experience specificity, role alignment — each with a score, one-line comment, and a quote from the resume as evidence.
-- **One-click AI rewrite** that weaves the JD's missing exact keywords into the candidate's real experience, with a word-level diff (green = added, red strikethrough = removed) so every change can be verified before use.
-- **Free quotas:** 5 AI reviews/day, 2 AI rewrites/day per IP. No signup required.
+- [Resume checker](https://checkats.online/): local keyword matching and extracted-text checks.
+- [Scoring method and data handling](https://checkats.online/methodology/): current formula, rules, limits, worked example, and external processing.
+- [Resume guides](https://checkats.online/guide/): published resume resources.
+- [Software engineer checklist](https://checkats.online/guide/ats-resume-checklist-software-engineers/): practical advice with product limitations and a vendor source.
 
-## Key facts
+## Facts and limits
 
-- JD matching is **exact-word only**: no synonyms, no stemming, no term mapping. "K8s" does not match "Kubernetes"; "Amazon Web Services" does not match "AWS".
-- The rewrite prompt **forbids fabricating** projects, companies, job titles, certificates, or new numbers/metrics. It may amplify the candidate's real contributions with reasonable wording.
-- The 4-dimension AI review runs on a small open model; scores are directional indicators, not precise measurements.
-- Scores are deterministic for identical inputs (fixed sampling settings).
-
-## Who it's for
-
-Job seekers — especially in tech roles — tailoring their resume to a specific job posting, and anyone who wants to check whether their resume contains an employer's exact keywords.
-
-## URL
-
-https://checkats.online
+- The simulated score is 60% selected JD exact-keyword coverage plus 40% extracted-text checks; it is not an employer ATS score or a hiring probability.
+- A skills dictionary selects JD terms; statistical extraction supplements thin matches or acts as a fallback. Matching ignores case but does not expand synonyms or acronyms.
+- The four text checks test email presence, supported date formats, clean characters, and 300–3,000 non-whitespace characters. They do not inspect the original document layout or recognize every valid date format.
+- Text-based PDF import runs locally; scanned PDFs need OCR, which is not included. DOCX upload is not supported.
+- Optional AI review assesses writing, results, specificity, and role alignment separately from the local score. AI outputs may vary and can be inaccurate.
+- Standard AI allowances are 5 review requests and 2 rewrite requests per IP per UTC day. Automatic review refreshes also consume requests; shared networks share allowances.
+- Local checks do not upload the resume. Optional AI review and rewrite send it to external providers; email delivery uses Resend. See the methodology page for data handling.
+- CheckATS is not affiliated with Greenhouse, Workday, or other ATS vendors. Their features and employer configurations differ.
