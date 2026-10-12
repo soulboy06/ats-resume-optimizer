@@ -1,0 +1,25 @@
+# ATS Resume Optimizer
+
+> Free AI-powered ATS resume checker and optimizer for job seekers. Paste a resume and a job description to get a compatibility score, AI HR-style feedback, and a one-click rewrite tailored to the job post.
+
+## What it does
+
+- **ATS compatibility score (simulated, not a real ATS score):** 60% JD exact-keyword coverage + 40% plain-text parseability (contact info extraction, date format consistency, encoding issues, reasonable length).
+- **AI HR-style review** across 4 dimensions: writing strength, quantification & results, experience specificity, role alignment — each with a score, one-line comment, and a quote from the resume as evidence.
+- **One-click AI rewrite** that weaves the JD's missing exact keywords into the candidate's real experience, with a word-level diff (green = added, red strikethrough = removed) so every change can be verified before use.
+- **Free quotas:** 5 AI reviews/day, 2 AI rewrites/day per IP. No signup required.
+
+## Key facts
+
+- JD matching is **exact-word only**: no synonyms, no stemming, no term mapping. "K8s" does not match "Kubernetes"; "Amazon Web Services" does not match "AWS".
+- The rewrite prompt **forbids fabricating** projects, companies, job titles, certificates, or new numbers/metrics. It may amplify the candidate's real contributions with reasonable wording.
+- The 4-dimension AI review runs on a small open model; scores are directional indicators, not precise measurements.
+- Scores are deterministic for identical inputs (fixed sampling settings).
+
+## Who it's for
+
+Job seekers — especially in tech roles — tailoring their resume to a specific job posting, and anyone who wants to check whether their resume contains an employer's exact keywords.
+
+## URL
+
+https://checkats.online
