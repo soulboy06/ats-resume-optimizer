@@ -608,3 +608,11 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }
+
+/* skills-dictionary note under keyword groups */
+.dict-note {
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: .62;
+  margin: 10px 2px 0;
+}
