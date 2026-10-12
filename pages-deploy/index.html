@@ -913,7 +913,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           var evidence=String(item.evidence||'').trim();
           return '<article class="hr-dimension"><div class="metric"><div class="metric-line"><strong>'+esc(t(dimensionKeys[index]||'hrDimensionExpression'))+'</strong><span class="metric-score">'+score+'%</span></div><div class="bar"><span data-width="'+score+'%" style="background:'+color+'"></span></div></div>'+(comment?'<p class="hr-dimension-comment">'+esc(comment)+'</p>':'')+(evidence?'<p class="hr-dimension-evidence">「'+esc(t('hrReviewEvidence',{evidence:evidence}))+'」</p>':'')+'</article>';
         }).join('');
-        return '<h4>'+esc(t('hrReviewDimensions'))+'</h4><div class="hr-dimension-list">'+dimensionRows+'</div><h4>'+esc(t('hrReviewOverall'))+'</h4><blockquote class="hr-review-quote">'+esc(review.overall)+'</blockquote><p class="hr-review-meta">'+esc(t('hrReviewModel',{model:review.model}))+'</p>';
+        return '<h4>'+esc(t('hrReviewDimensions'))+'</h4><div class="hr-dimension-list">'+dimensionRows+'</div><h4>'+esc(t('hrReviewOverall'))+'</h4><blockquote class="hr-review-quote">'+esc(review.overall)+'</blockquote>';
       }
 
       function hrReviewMarkup(){
