@@ -90,7 +90,7 @@ input:focus-visible, select:focus-visible {
 }
 .nav { width: 100%; height: 72px; padding: 12px 24px; gap: 24px; }
 .brand { min-height: 44px; gap: 10px; font-size: 20px; font-weight: 600; letter-spacing: -.035em; }
-.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; color: #fffdf8; background: var(--emerald); border-radius: 10px; box-shadow: inset 0 1px 0 #ffffff40, 0 3px 8px #b44d3010; }
+.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; background: transparent; }
 .brand-symbol { width: 25px; height: 25px; }
 .nav-links { gap: 28px; }
 .nav-links > a:not(.button) { font-size: 13px; font-weight: 400; }
