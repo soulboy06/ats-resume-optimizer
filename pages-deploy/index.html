@@ -605,6 +605,33 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       var stopwords = new Set('a an and are as at be been being but by can could did do does doing for from had has have having he her hers him his how i if in into is it its itself just may me might more most must my no nor not of off on once only or other our ours out over own same she should so some such than that the their theirs them then there these they this those through to too under up very was we were what when where which while who why will with would you your yours about above after again against all am any because before below between both during each few further here itself now s t don should ve ll re company role team work working looking including using use used plus per responsibilities responsibility requirements requirement qualifications qualification preferred preference candidate candidates ideal join joining fast paced dynamic environment opportunity opportunities position duties duty nice bonus seeking successful applicant applicants employer employment culture values we our us years year experience experienced strong excellent good great'.split(/\s+/));
       var chineseStopwords = new Set(['负责','具备','良好','优先','能力','经验','团队','沟通','熟悉','了解','掌握','加分','要求','岗位','职责','任职','以上','相关','进行','包括','以及','通过','能够','我们','你将','工作','职位','公司','业务','场景','核心','使用','实现','提升','推动','参与','学习','管理','系统','技术','开发','应用','工程','数据','方案','基础','环境','积累','实战','计算','模型','任务','配合','协助','支持','维护','优化','设计','测试','部署','文档','汇报','协调','落地','推进','闭环','抓手','方法论','复盘','对齐','颗粒度','思维','逻辑','创新','主动','积极','热情','耐心','细心','抗压','执行力','责任心','解决问题','待遇','薪资','福利','发展','平台','机会','氛围','优先考虑','能力强','上下文','并发']);
 
+      /* Generic soft-skill buzzwords excluded from JD keyword matching.
+         These appear in nearly every resume ("communicate with clients",
+         "detail-oriented"), so counting them as matched keywords inflates the
+         score without adding signal. Reported by a real user
+         (r/alphaandbetausers, 2026-10-13): a score of 82 felt generous because
+         half the "matched" keywords were generic filler like "communicate"
+         and "detail-oriented". Checked in both the dictionary path and the
+         statistical fallback. Hyphens are normalized to spaces so
+         "detail-oriented" and "detail oriented" are both caught. */
+      var genericWords = new Set([
+        'communicate','communicates','communicated','communicating','communication','communicator',
+        'collaborate','collaborates','collaborated','collaborating','collaboration',
+        'detail oriented','attention to detail',
+        'team player','self starter','quick learner','fast learner','hard worker',
+        'strong work ethic','work ethic','positive attitude','can do attitude','people person',
+        'interpersonal skills','communication skills','organizational skills','organisational skills',
+        'time management','problem solving','critical thinking','creative thinking',
+        'willingness to learn',
+        'passionate','motivated','dedicated','enthusiastic','proactive','driven','ambitious',
+        'dynamic','flexible','adaptable','reliable','dependable','punctual','honest','loyal',
+        'energetic','friendly','outgoing','patient','respectful','responsible',
+        'organized','organised','creative','positive','eager'
+      ]);
+      function isGenericWord(phrase){
+        return genericWords.has(String(phrase||'').toLowerCase().replace(/-/g,' ').replace(/\s+/g,' ').trim());
+      }
+
       function cjkChars(text) { return (String(text || '').match(/[\u3400-\u9fff]/g) || []); }
       function isChineseText(text) {
         var compact=String(text || '').replace(/\s/g,'');
@@ -726,7 +753,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           for(n=Math.min(MAXN,tokens.length-i);n>=1;n--){
             phrase=tokens.slice(i,i+n).join(' ');
             disp=skillsDictLatin[phrase];
-            if(disp){
+            if(disp&&!isGenericWord(phrase)){
               key=normalizeExactText(disp);
               if(!hits[key]) hits[key]={key:key,term:disp,count:0};
               hits[key].count++;
@@ -765,7 +792,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           if(!key||/^\d+(?:[.+%-]\d+)*$/.test(key))return;
           var hasChinese=/[\u3400-\u9fff]/.test(term);
           if(hasChinese){if(term.length<2||chineseStopwords.has(term))return;}
-          else if(key.length<2||stopwords.has(key))return;
+          else if(key.length<2||stopwords.has(key)||isGenericWord(key))return;
           if(!candidates[key])candidates[key]={key:key,term:term,count:0,weight:1,rank:0};
           candidates[key].count++;
         });
