@@ -187,9 +187,9 @@
     <section class="section" id="resources" aria-labelledby="resourcesTitle">
       <div class="section-heading"><h2 id="resourcesTitle" data-i18n="resourcesTitle">Resume guides and scoring details</h2><p data-i18n="resourcesCopy">Understand the checks before interpreting your score.</p></div>
       <ul>
-        <li><a href="/guide/ats-resume-checklist-software-engineers/" data-i18n="guideLink">ATS resume checklist for software engineers</a></li>
-        <li><a href="/methodology/" data-i18n="methodLink">How CheckATS scores resumes and handles data</a></li>
-        <li><a href="/guide/" data-i18n="allGuidesLink">Browse resume guides</a></li>
+        <li><a href="/guide/ats-resume-checklist-software-engineers/" data-i18n="guideLink" data-i18n-href-zh="/zh/guide/ats-resume-checklist-software-engineers/">ATS resume checklist for software engineers</a></li>
+        <li><a href="/methodology/" data-i18n="methodLink" data-i18n-href-zh="/zh/methodology/">How CheckATS scores resumes and handles data</a></li>
+        <li><a href="/guide/" data-i18n="allGuidesLink" data-i18n-href-zh="/zh/guide/">Browse resume guides</a></li>
       </ul>
     </section>
 
@@ -469,7 +469,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         },
         zh: {
           resourcesTitle:"简历指南与评分说明",
-          resourcesCopy:"先了解检查范围，再解读分数。以下详细指南目前为英文。",
+          resourcesCopy:"先了解检查范围，再解读分数。",
           guideLink:"软件工程师 ATS 简历检查清单",
           methodLink:"CheckATS 评分方法与数据处理说明",
           allGuidesLink:"浏览简历指南",
@@ -519,6 +519,11 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         document.querySelectorAll('[data-i18n-html]').forEach(function(el){ el.innerHTML = t(el.getAttribute('data-i18n-html')); });
         document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){ el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
         document.querySelectorAll('[data-i18n-aria]').forEach(function(el){ el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
+        document.querySelectorAll('[data-i18n-href-zh]').forEach(function(el){
+          var zh = el.getAttribute('data-i18n-href-zh');
+          if(!el.getAttribute('data-i18n-href-en')) el.setAttribute('data-i18n-href-en', el.getAttribute('href'));
+          el.setAttribute('href', currentLang === 'zh' ? zh : el.getAttribute('data-i18n-href-en'));
+        });
         document.querySelectorAll('.lang-option').forEach(function(btn){
           var active = btn.getAttribute('data-lang') === currentLang;
           btn.classList.toggle('active', active);

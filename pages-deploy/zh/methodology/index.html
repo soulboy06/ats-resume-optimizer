@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CheckATS 简历打分方法 | CheckATS</title>
+  <meta name="description" content="了解 CheckATS 如何计算关键词覆盖率和四项文本检查、这个分数测不了什么、免费 AI 额度，以及你的简历在哪里处理。" />
+  <link rel="canonical" href="https://checkats.online/zh/methodology/" />
+  <link rel="alternate" hreflang="en" href="https://checkats.online/methodology/" />
+  <link rel="alternate" hreflang="zh-CN" href="https://checkats.online/zh/methodology/" />
+  <link rel="alternate" hreflang="x-default" href="https://checkats.online/methodology/" />
+  <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles/guide.css" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="CheckATS 简历打分方法 | CheckATS" />
+  <meta property="og:description" content="了解 CheckATS 如何计算关键词覆盖率和四项文本检查、这个分数测不了什么、免费 AI 额度，以及你的简历在哪里处理。" />
+  <meta property="og:url" content="https://checkats.online/zh/methodology/" />
+  <meta property="og:image" content="https://checkats.online/assets/og-card.png" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://checkats.online/assets/og-card.png" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "inLanguage": "zh-CN", "name": "CheckATS 简历打分方法 | CheckATS", "url": "https://checkats.online/zh/methodology/", "description": "了解 CheckATS 如何计算关键词覆盖率和四项文本检查、这个分数测不了什么、免费 AI 额度，以及你的简历在哪里处理。"}</script>
+</head><body>
+  <nav class="top" aria-label="主导航"><a href="/">← CheckATS 简历检测</a> · <a href="/zh/guide/">中文指南</a> · <a href="/methodology/">English</a></nav>
+  <main class="wrap">
+    <h1>CheckATS 怎么给你的简历打分</h1>
+    <p class="meta">CheckATS · 更新于 2026 年 10 月 13 日</p>
+    <div class="answer-box"><p><strong>一句话总结：</strong>CheckATS 算的是一个模拟分 = 60% 职位描述关键词覆盖率 + 40% 纯文本检查，全部在你的浏览器本地运行。可选的 AI 点评是另一套独立的写作评估。这个分数不是雇主 ATS 的分数，也不是拿到 offer 的概率。</p></div>
+    <h2>分数由什么组成？</h2>
+    <p><code>模拟分 = round(0.60 × 关键词覆盖率 + 0.40 × 文本检查分)</code></p>
+    <p>关键词覆盖率 = 简历里出现的目标职位词条占全部选中词条的百分比（四舍五入）。每个词条权重相等；工具不会猜雇主认为哪些是必须项。</p>
+    <h2>职位关键词怎么选、怎么匹配？</h2>
+    <p>浏览器先加载一个跨职业技能词典，从职位描述里选出最多 40 个词典命中词。如果命中不足 5 个，就用词频统计补足（会排除常见虚词）。如果词典加载失败，备选词可能变化。</p>
+    <p>通用软技能词在两条路径里都会被排除：<code>communicate</code>、<code>detail-oriented</code>、<code>team player</code>、<code>time management</code> 这类词几乎每份简历都有，计入只会虚增覆盖率、没有信息量。所以这个分数反映的是硬技能和工具覆盖率，而不是简历里塞了多少套话。</p>
+    <p>简历匹配不区分大小写，会归一化空格和长破折号，按拉丁单词边界检查。中文词直接子串匹配。不做同义词扩展、词干提取、缩写映射：<code>K8s</code> 匹配不到 <code>Kubernetes</code>，<code>Amazon Web Services</code> 匹配不到 <code>AWS</code>。重复出现已命中的词不会提高覆盖率。</p>
+    <h2>四项纯文本检查</h2>
+    <p>每通过一项得 25 分，文本检查分最多贡献总分里的 40 分。</p>
+    <table><thead><tr><th scope="col">检查</th><th scope="col">当前规则</th></tr></thead><tbody>
+      <tr><th scope="row">联系方式</th><td>能找到邮箱地址。电话检测是辅助项，不决定是否通过。</td></tr>
+      <tr><th scope="row">日期</th><td>至少两个被支持的年月日期，且全文格式统一：YYYY.MM、YYYY-MM、MM/YYYY 或中文年月。"Jan 2024" 这类英文月份目前认不出。</td></tr>
+      <tr><th scope="row">文本干净</th><td>无替换字符、私用区字符不超过两个、去空格后其他符号字符不超过 5%。</td></tr>
+      <tr><th scope="row">篇幅</th><td>去空格后 300–3000 个 Unicode 字符。这个启发式规则决定不了所有岗位的理想页数和篇幅。</td></tr>
+    </tbody></table>
+    <h2>一个算例</h2>
+    <p>假设选中的职位词是 Python、SQL、Docker、Kubernetes、AWS，简历里有前三个，关键词覆盖率 = 3 ÷ 5 = 60%。四项文本检查全过得 100%。模拟分 = <strong>round(0.60 × 60 + 0.40 × 100) = 76/100</strong>。这是示意数字，不是雇主的基准线。</p>
+    <h2>这个分数测不了什么</h2>
+    <ul><li>原始 PDF 的排版、分栏、表格、板块识别，以及雇主解析器实际怎么读。</li><li>扫描件或纯图片 PDF：CheckATS 没有 OCR，只接受粘贴文本和文本型 PDF，不收 DOCX。</li><li>雇主的筛选问题、工作许可、招聘政策、面试决定。</li><li>经历质量和可验证的业绩：这需要人来看。AI 的建议也可能出错。</li></ul>
+    <p>输入不变、选中词条不变，本地分数是确定的。AI 点评和改写每次可能不同，使用前请检查。补关键词只补你真实具备的。</p>
+    <h2>跟 Greenhouse、Workday 有什么区别？</h2>
+    <p>CheckATS 是独立的备战工具，跟这些厂商没有关系。各家 ATS 的功能和雇主配置都不一样。比如 <a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ">Greenhouse Talent Matching FAQ</a> 里写的近义词匹配，明确说了不会自动淘汰或晋级候选人。CheckATS 复制不了那套系统，也复制不了 Workday 的筛选。</p>
+    <h2>免费吗？</h2>
+    <p>本地检查不要账号，也不消耗 AI 额度。标准 AI 限额是每 IP 每天 5 次点评 + 2 次改写（UTC 午夜重置）。同一网络共享 IP 额度。改写后自动刷新点评也会消耗点评次数，失败的请求也可能消耗额度。</p>
+    <h2>我的简历在哪里处理？</h2>
+    <ul><li><strong>本地检查和 PDF 提取：</strong>在这个浏览器标签页里跑；这些操作不会把简历上传。</li><li><strong>AI 点评：</strong>把简历和职位描述发到本站 Cloudflare Worker，走 Cloudflare Workers AI。当前每次点评最多用 6000 简历字符 + 800 职位描述字符。</li><li><strong>AI 改写：</strong>把简历、职位描述和缺失词条发到 Worker 和 DeepSeek。请检查返回的文本和高亮改动；prompt 写得再细也保证不了事实准确。</li><li><strong>邮件发送：</strong>按需把收件地址和优化版简历发给 Resend 发出。</li><li><strong>反馈：</strong>提交的内容可能被存储，包括联系方式和 IP。没打算提交就别在反馈里贴简历。</li></ul>
+    <p>本站 Worker 用 IP 做请求计数。服务商的日志和保留政策按它们自己的来；本地打分保证不了外部 AI 和邮件的保留情况。本站还会加载第三方字体、PDF 库和分析脚本。</p>
+    <h2>来源与实现</h2>
+    <p>上面的公式和限额对应 <a href="https://github.com/soulboy06/ats-resume-optimizer">CheckATS 开源仓库</a>，主要是本地打分代码和 AI Worker。Greenhouse 的说法见上面的厂商来源。产品规则可能变，本页描述的是当前实现。</p>
+    <div class="cta"><p>先看清选中了哪些词条，再动手改。</p><a href="/#analyzer">试用免费简历检测 →</a></div>
+    <p><a href="/zh/guide/ats-resume-checklist-software-engineers/">软件工程师简历检查清单</a> · <a href="/zh/guide/">全部中文指南</a></p>
+</main>
+  <footer>CheckATS · <a href="/">免费 ATS 简历检测</a> · <a href="/zh/guide/">中文指南</a> · <a href="/zh/methodology/">计分与数据说明</a></footer>
+</body></html>
