@@ -874,7 +874,18 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           if(exactWordCount(resume,keyword.term)>0)matched.push(keyword);
           else missing.push(keyword);
         });
-        var keywordScore=keywords.length?Math.round(matched.length/keywords.length*100):0;
+        /* Frequency-weighted keyword coverage (2026-10-17): a keyword the JD
+           repeats carries more weight than a one-off mention (weight capped
+           at 5). Binary matched/total treated every keyword equally, which
+           made scores feel generous when all the matches were low-frequency
+           terms the JD barely emphasized. */
+        var totalWeight=0,matchedWeight=0;
+        keywords.forEach(function(keyword){
+          var weight=Math.min(keyword.count||1,5);
+          totalWeight+=weight;
+          if(matched.indexOf(keyword)!==-1)matchedWeight+=weight;
+        });
+        var keywordScore=totalWeight?Math.round(matchedWeight/totalWeight*100):0;
         keywordScore=Math.max(0,Math.min(100,keywordScore));
         var parseability=scoreParseability(resume);
         var atsScore=Math.round(keywordScore*.6+parseability.score*.4);
