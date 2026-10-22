@@ -1,48 +1,10 @@
-/**
- * Resume templates for CheckATS Studio.
- * Each template defines: id, name (zh/en), and render functions.
- * Templates are ATS-safe: single column, real text, standard fonts.
- */
-
-const StudioTemplates = (() => {
-  // Shared helpers
-  const COLORS = {
-    classic: { primary: '#1a1a1a', accent: '#1a1a1a', muted: '#555555', line: '#cccccc' },
-    modern: { primary: '#1a1a1a', accent: '#2563eb', muted: '#555555', line: '#e5e7eb' },
-    minimal: { primary: '#222222', accent: '#666666', muted: '#777777', line: '#dddddd' },
-  };
-
+/* Classic adapts the MIT-licensed sb2nov/resume layout; see licenses/. */
+(function(root) {
   const templates = [
-    {
-      id: 'classic',
-      name: { zh: '经典', en: 'Classic' },
-      desc: { zh: '传统衬线标题，黑白配色，适合保守行业', en: 'Serif headings, black & white, for conservative industries' },
-      colors: COLORS.classic,
-    },
-    {
-      id: 'modern',
-      name: { zh: '现代', en: 'Modern' },
-      desc: { zh: '无衬线字体，蓝色点缀，干净利落', en: 'Sans-serif with blue accents, clean and sharp' },
-      colors: COLORS.modern,
-    },
-    {
-      id: 'minimal',
-      name: { zh: '简约', en: 'Minimal' },
-      desc: { zh: '大量留白，灰色系，突出内容本身', en: 'Generous whitespace, grayscale, content-first' },
-      colors: COLORS.minimal,
-    },
+    { id:'classic',name:{zh:'经典单栏',en:'Classic'},desc:{zh:'衬线标题 · 清晰分节',en:'Serif headings · ruled sections'},family:'serif',accent:'#292b24',rule:true,margin:44,gap:12,source:'https://github.com/sb2nov/resume',credit:'Adapted from sb2nov/resume (MIT)' },
+    { id:'modern',name:{zh:'现代专业',en:'Modern'},desc:{zh:'暖色点缀 · 可选照片',en:'Warm accent · optional photo'},family:'sans',accent:'#b44d30',rule:true,margin:44,gap:13,credit:'Original CheckATS layout' },
+    { id:'minimal',name:{zh:'极简留白',en:'Minimal'},desc:{zh:'克制排版 · 内容优先',en:'Quiet typography · more space'},family:'sans',accent:'#506047',rule:false,margin:50,gap:17,credit:'Original CheckATS layout' }
   ];
-
-  function get(id) {
-    return templates.find(t => t.id === id) || templates[0];
-  }
-
-  function list() {
-    return templates.map(t => ({ id: t.id, name: t.name, desc: t.desc }));
-  }
-
-  return { get, list };
-})();
-
-if (typeof module !== 'undefined' && module.exports) module.exports = StudioTemplates;
-else window.StudioTemplates = StudioTemplates;
+  const api={list:()=>templates,get:id=>templates.find(t=>t.id===id)||templates[0]};
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.StudioTemplates=api;
+})(typeof window==='undefined'?globalThis:window);

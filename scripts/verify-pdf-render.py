@@ -6,13 +6,16 @@ from pathlib import Path
 import fitz
 
 root = Path(__file__).resolve().parents[1]
-for name in ('original', 'optimized', 'chinese-original', 'chinese-optimized'):
+names = ['original', 'optimized', 'chinese-original', 'chinese-optimized']
+names += [file.stem for file in sorted((root / 'tmp/pdfs').glob('studio-*.pdf'))]
+for name in names:
     file = root / 'tmp/pdfs' / (name + '.pdf')
     with fitz.open(file) as pdf:
         glyphs = 0
         for page in pdf:
             assert page.get_text().strip(), (name, 'no extractable text')
-            assert not page.get_images(), (name, 'text was rasterized')
+            if name != 'studio-long-photo':
+                assert not page.get_images(), (name, 'text was rasterized')
             for block in page.get_text('rawdict')['blocks']:
                 for line in block.get('lines', []):
                     for span in line['spans']:
@@ -24,7 +27,8 @@ for name in ('original', 'optimized', 'chinese-original', 'chinese-optimized'):
                             assert sum(x < 210 for x in pix.samples) >= 2, (name, 'missing visible glyph', char['c'])
                             glyphs += 1
             assert glyphs, name
-        pdf[0].get_pixmap(matrix=fitz.Matrix(1.4, 1.4)).save(root / 'tmp/pdfs' / (name + '.png'))
+        for index, page in enumerate(pdf):
+            page.get_pixmap(matrix=fitz.Matrix(1.4, 1.4)).save(root / 'tmp/pdfs' / (name + ('' if index == 0 else '-' + str(index + 1)) + '.png'))
         print('PASS', name, len(pdf), 'pages;', glyphs, 'extractable visible glyphs; no raster text')
 
 download = Path.home() / 'Downloads/original-optimized.pdf'

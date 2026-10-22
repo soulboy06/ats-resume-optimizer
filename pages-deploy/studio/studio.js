@@ -1,515 +1,99 @@
-/**
- * CheckATS Resume Studio - Workbench logic
- * Template selection, content editing, photo upload, live preview, PDF export.
- */
-(() => {
-  const state = {
-    template: 'classic',
-    photo: null, // data URL
-    data: {
-      name: '',
-      title: '',
-      contact: '',
-      summary: '',
-      experience: '',
-      projects: '',
-      education: '',
-      skills: '',
-      certs: '',
-    }
+(function(){
+  'use strict';
+  const engine=window.StudioEngine,$=id=>document.getElementById(id);
+  const copy={
+    en:{title:'Your story. Ready to send.',intro:'Choose a layout, make it yours, and leave with a readable PDF.',privacy:'Content and photos stay in this browser. No account needed.',back:'← Back to analyzer',stepOne:'01 / CHOOSE A LOOK',templates:'A layout that fits you.',credits:'Template sources & licenses ↗',paper:'Paper',fontSize:'Text size',headingLanguage:'PDF headings',stepTwo:'02 / MAKE IT YOURS',details:'The person behind the page.',name:'Full name',role:'Professional title',contact:'Contact details & links',uploadPhoto:'Add a photo',removePhoto:'Remove',photoHint:'Optional · JPG, PNG or WebP · up to 5 MB. Center-cropped for the header.',content:'Words worth keeping.',contentHint:'Review the imported sections. Unknown content is kept under Additional information.',paste:'Paste a complete resume',raw:'Complete resume text',apply:'Apply to fields',replaceHint:'Replaces the fields below. Your template and photo stay selected.',clear:'Clear this draft',stepThree:'03 / READY WHEN YOU ARE',preview:'Your PDF, as it will download.',download:'Download PDF',empty:'Your resume will appear here. Start with your rewrite or paste your text.',footnote:'Selectable text, automatic page breaks, no watermark. Review every page before sending.',summary:'Summary',experience:'Experience',projects:'Projects',education:'Education',skills:'Skills',certs:'Certifications',other:'Additional information',busy:'Preparing your PDF…',ready:'PDF ready. Text extraction checked. Pages: ',stale:'Updating preview. Download will be ready when it matches your edits.',storage:'Draft saved in this browser tab.',storageFail:'Browser storage is unavailable. Keep this page open and download your PDF before leaving.',imported:'Your AI rewrite is ready to style. Check the section fields before downloading.',loaded:'Resume applied. Check the fields and content order.',noText:'Paste your resume text first.',photoError:'Choose a valid JPG, PNG or WebP up to 5 MB.',photoReady:'Photo added locally. It is included in the PDF.',emptyError:'Add your resume content to begin.',fontError:'A character is not supported by the bundled fonts. Replace it and retry.',roundTrip:'The generated text could not be verified. Download is blocked; review your content and retry.',error:'PDF could not be prepared. Your content is kept; edit a field to retry.',contentLimit:'Use at most 60,000 characters in total and 30,000 per section.',pages:'This draft exceeds 15 pages. Shorten the content before exporting.',cleared:'Draft cleared.',confirmClear:'Clear all text and the photo from this draft?',page:'Page',restore:'Draft restored in this tab.'},
+    zh:{title:'你的经历，准备好出发。',intro:'选一个喜欢的版式，补充细节，带走一份清晰可读的 PDF 简历。',privacy:'内容与照片均在本机浏览器处理，无需注册。',back:'← 返回分析首页',stepOne:'01 / 选择版式',templates:'找到适合你的表达。',credits:'模板来源与许可 ↗',paper:'纸张',fontSize:'正文字号',headingLanguage:'PDF 栏目语言',stepTwo:'02 / 补充细节',details:'让简历有你的样子。',name:'姓名',role:'求职意向 / 职业标题',contact:'联系方式与个人链接',uploadPhoto:'上传照片',removePhoto:'移除',photoHint:'可选 · JPG、PNG 或 WebP · 不超过 5 MB。照片居中裁切后放在页首。',content:'值得留下的经历。',contentHint:'请检查自动分配的栏目。未识别内容保留在「其他信息」，可以自行调整。',paste:'粘贴完整简历',raw:'完整简历文字',apply:'一键填入栏目',replaceHint:'会替换下方文字，保留当前模板与照片。',clear:'清空当前草稿',stepThree:'03 / 准备好，即可出发',preview:'这里看到的，就是导出的 PDF。',download:'下载 PDF',empty:'你的简历将在这里呈现。从 AI 改写结果进入，或粘贴简历开始制作。',footnote:'原生可选文字 · 自动分页 · 无水印。发送前请检查每一页。',summary:'个人简介',experience:'工作经历',projects:'项目经历',education:'教育背景',skills:'专业技能',certs:'证书认证',other:'其他信息',busy:'正在生成 PDF…',ready:'PDF 已就绪，已验证文字可解析。页数：',stale:'正在更新预览，完成后可下载最新版本。',storage:'草稿已保存在当前浏览器标签页。',storageFail:'浏览器存储不可用，请保持页面开启，并在离开前下载 PDF。',imported:'已带入 AI 改写结果。选择模板后，请核对各栏目再导出。',loaded:'已填入简历，请检查各栏目与内容顺序。',noText:'请先粘贴简历文字。',photoError:'请上传有效的 JPG、PNG 或 WebP 图片，且不超过 5 MB。',photoReady:'照片已在本机加入，将随 PDF 导出。',emptyError:'填写简历后即可预览。',fontError:'导出字体暂不支持某个字符，请替换后重试。',roundTrip:'导出文字未通过解析验证，已阻止下载。请检查内容后重试。',error:'未能生成 PDF，内容已保留。修改任一字段可重试。',contentLimit:'简历总计最多 60,000 字符，每栏最多 30,000 字符。',pages:'当前简历超过 15 页，请缩短内容后导出。',cleared:'已清空草稿。',confirmClear:'清空当前草稿中的文字和照片？',page:'第',restore:'已恢复当前标签页的草稿。'}
   };
-
-  // ---------- Template picker ----------
-  function renderTemplateGrid() {
-    const grid = document.getElementById('templateGrid');
-    const lang = document.documentElement.lang === 'en' ? 'en' : 'zh';
-    grid.innerHTML = StudioTemplates.list().map(t => `
-      <div class="template-card ${t.id === state.template ? 'active' : ''}" data-id="${t.id}">
-        <div class="tname">${t.name[lang]}</div>
-        <div class="tdesc">${t.desc[lang]}</div>
-      </div>
-    `).join('');
-    grid.querySelectorAll('.template-card').forEach(card => {
-      card.addEventListener('click', () => {
-        state.template = card.dataset.id;
-        renderTemplateGrid();
-        renderPreview();
-      });
-    });
-  }
-
-  // ---------- Data binding ----------
-  function bindInputs() {
-    const map = {
-      fName: 'name', fTitle: 'title', fContact: 'contact',
-      fSummary: 'summary', fExperience: 'experience',
-      fEducation: 'education', fSkills: 'skills', fProjects: 'projects', fCerts: 'certs'
-    };
-    for (const [id, key] of Object.entries(map)) {
-      const el = document.getElementById(id);
-      if (!el) continue;
-      el.value = state.data[key] || '';
-      el.addEventListener('input', () => {
-        state.data[key] = el.value;
-        renderPreview();
-      });
+  const map={fName:'name',fTitle:'title',fContact:'contact'};
+  let lang=new URLSearchParams(location.search).get('lang')==='zh'?'zh':'en';
+  let state={data:engine.blank(),template:'classic',paper:'a4',size:'10.5',contentLanguage:lang,photo:null};
+  let revision=0,result=null,timer,rendering=false,fontBytes,photoVersion=0;
+  const t=key=>copy[lang][key]||key;
+  function notice(text,error=false){$('handoffStatus').textContent=text;$('handoffStatus').dataset.message=Object.keys(copy.en).find(key=>copy.en[key]===text||copy.zh[key]===text)||'';$('handoffStatus').classList.toggle('is-error',error);}
+  function status(text,error=false){$('exportStatus').textContent=text;$('exportStatus').classList.toggle('is-error',error);}
+  function save(){try{sessionStorage.setItem('checkats_studio_draft',JSON.stringify(state));$('draftStatus').textContent=t('storage');}catch(_){$('draftStatus').textContent=t('storageFail');}}
+  function renderTemplates(){
+    $('templateGrid').replaceChildren();
+    for(const template of StudioTemplates.list()){
+      const button=document.createElement('button');button.type='button';button.className='template-card '+template.id;
+      button.setAttribute('aria-pressed',String(template.id===state.template));button.setAttribute('aria-label',template.name[lang]);button.title=template.desc[lang];button.style.setProperty('--template-accent',template.accent);
+      const sheet=document.createElement('span');sheet.className='template-sheet';sheet.setAttribute('aria-hidden','true');
+      for(let n=0;n<9;n++)sheet.append(document.createElement('i'));
+      const label=document.createElement('strong');label.textContent=template.name[lang];button.append(sheet,label);
+      button.addEventListener('click',()=>{state.template=template.id;renderTemplates();schedule();});$('templateGrid').append(button);
     }
+    $('templateCredit').textContent=StudioTemplates.get(state.template).credit;
   }
-
-  function loadFromStorage() {
-    try {
-      const raw = localStorage.getItem('checkats_studio_data');
-      if (raw) {
-        const d = JSON.parse(raw);
-        Object.assign(state.data, d);
-        if (d.template) state.template = d.template;
+  function language(){
+    document.documentElement.lang=lang;document.title=lang==='zh'?'PDF 简历工作台 | CheckATS':'Resume PDF Studio | CheckATS';
+    document.querySelectorAll('[data-i18n]').forEach(node=>node.textContent=t(node.dataset.i18n));
+    document.querySelectorAll('[data-lang]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.lang===lang)));
+    for(const key of ['summary','experience','projects','education','skills','certs','other'])$('label-'+key).textContent=t(key);
+    if($('handoffStatus').dataset.message)$('handoffStatus').textContent=t($('handoffStatus').dataset.message);
+    document.querySelectorAll('.pdf-page').forEach((figure,index)=>{figure.querySelector('figcaption').textContent=t('page')+' '+(index+1)+' / '+(result?.pages||'');figure.querySelector('canvas').setAttribute('aria-label',t('page')+' '+(index+1));});
+    renderTemplates();if(result)status(t('ready')+result.pages);else if(rendering)status(t('busy'));
+  }
+  function sync(){for(const [id,key]of Object.entries(map))$(id).value=state.data[key];$('paper').value=state.paper;$('fontSize').value=state.size;$('contentLanguage').value=state.contentLanguage;photoPreview();}
+  function photoPreview(){const host=$('photoPreview');host.replaceChildren();if(state.photo){const img=document.createElement('img');img.src=state.photo;img.alt='';host.append(img);}else host.textContent='＋';$('photoRemove').hidden=!state.photo;}
+  function schedule(){revision++;result=null;$('exportPdfBtn').disabled=true;document.querySelector('.studio-preview').classList.add('is-stale');status(t('stale'));save();clearTimeout(timer);timer=setTimeout(build,250);}
+  async function build(){
+    if(rendering)return;rendering=true;
+    const version=revision,snapshot=JSON.parse(JSON.stringify(state));status(t('busy'));
+    let pdf;
+    try{
+      await window.studioPdfReady;
+      const built=await engine.generate(snapshot.data,snapshot,{templates:StudioTemplates,pdfLib:PDFLib,fontkit:window.fontkit,pdfjs:window.pdfjsLib,unicodeFont:async()=>{
+        if(!fontBytes){const response=await fetch('/vendor/fonts/NotoSansSC.ttf');if(!response.ok)throw new Error('font');fontBytes=new Uint8Array(await response.arrayBuffer());}return fontBytes;
+      }});
+      if(version!==revision)return;
+      pdf=await pdfjsLib.getDocument({data:built.bytes.slice(),isEvalSupported:false,standardFontDataUrl:'/vendor/standard_fonts/'}).promise;
+      const fragment=document.createDocumentFragment();
+      for(let n=1;n<=pdf.numPages;n++){
+        const page=await pdf.getPage(n),view=page.getViewport({scale:1.3}),canvas=document.createElement('canvas');canvas.width=Math.ceil(view.width);canvas.height=Math.ceil(view.height);canvas.setAttribute('role','img');canvas.setAttribute('aria-label',t('page')+' '+n);
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;
+        const figure=document.createElement('figure');figure.className='pdf-page';const caption=document.createElement('figcaption');caption.textContent=t('page')+' '+n+' / '+pdf.numPages;figure.append(caption,canvas);fragment.append(figure);
+        if(version!==revision)return;
       }
-      // AI rewrite handoff
-      const aiText = localStorage.getItem('checkats_ai_rewrite');
-      if (aiText) {
-        parseAiRewrite(aiText);
-        localStorage.removeItem('checkats_ai_rewrite');
-      }
-    } catch (e) { console.warn('load failed', e); }
+      if(version!==revision)return;
+      $('resumePreview').replaceChildren(fragment);result=built;$('exportPdfBtn').disabled=false;document.querySelector('.studio-preview').classList.remove('is-stale');status(t('ready')+built.pages);
+    }catch(error){if(version===revision){result=null;$('exportPdfBtn').disabled=true;const key=error.message==='empty'?'emptyError':error.message==='font'?'fontError':Object.hasOwn(copy.en,error.message)?error.message:'error';status(t(key),error.message!=='empty');}}
+    finally{if(pdf)await pdf.destroy();rendering=false;if(version!==revision){clearTimeout(timer);timer=setTimeout(build,50);}}
   }
-
-  function saveToStorage() {
-    try {
-      localStorage.setItem('checkats_studio_data', JSON.stringify({ ...state.data, template: state.template }));
-    } catch (e) {}
+  async function photo(file){
+    const version=++photoVersion;
+    try{
+      if(!file||!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)throw new Error();
+      const bitmap=await createImageBitmap(file);
+      if(bitmap.width*bitmap.height>40000000){bitmap.close();throw new Error();}
+      const canvas=document.createElement('canvas');canvas.width=360;canvas.height=470;
+      const ratio=Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height),w=bitmap.width*ratio,h=bitmap.height*ratio;
+      canvas.getContext('2d').drawImage(bitmap,(360-w)/2,(470-h)/2,w,h);bitmap.close();
+      if(version!==photoVersion)return;state.photo=canvas.toDataURL('image/png');photoPreview();$('photoStatus').textContent=t('photoReady');schedule();
+    }catch(_){if(version===photoVersion)$('photoStatus').textContent=t('photoError');}
+    finally{$('photoInput').value='';}
   }
-
-  // Heuristic: parse AI rewrite plain text into structured fields.
-  function parseAiRewrite(text) {
-    const lines = text.split('\n');
-    // Try to find name (first non-empty line, short)
-    let idx = 0;
-    while (idx < lines.length && !lines[idx].trim()) idx++;
-    if (idx < lines.length && lines[idx].trim().length < 30) {
-      state.data.name = lines[idx].trim();
-      idx++;
-    }
-    // Contact line (contains @ or phone pattern)
-    if (idx < lines.length && /@|\d{3,}/.test(lines[idx])) {
-      state.data.contact = lines[idx].trim();
-      idx++;
-    }
-    // Rest: try to split into sections by common headings
-    const rest = lines.slice(idx).join('\n');
-    const sections = splitSections(rest);
-    if (sections.summary) state.data.summary = sections.summary;
-    if (sections.experience) state.data.experience = sections.experience;
-    if (sections.education) state.data.education = sections.education;
-    if (sections.skills) state.data.skills = sections.skills;
-    if (sections.projects) state.data.projects = sections.projects;
-    if (sections.certs) state.data.certs = sections.certs;
-    // Fallback: put everything in experience if no sections found
-    if (!sections.summary && !sections.experience && rest.trim()) {
-      state.data.experience = rest.trim();
-    }
-    syncInputs();
+  function apply(text){state.data=engine.parse(text);state.contentLanguage=/[\u3400-\u9fff]/.test(text)?'zh':'en';sync();schedule();}
+  // Create every editable section, including the lossless fallback for unknown sections.
+  for(const key of ['summary','experience','projects','education','skills','certs','other']){
+    const wrap=document.createElement('div');wrap.className='studio-field';const label=document.createElement('label');label.id='label-'+key;label.htmlFor='f-'+key;
+    const input=document.createElement('textarea');input.id='f-'+key;input.rows=['experience','projects'].includes(key)?7:4;input.maxLength=30000;map[input.id]=key;wrap.append(label,input);$('sectionFields').append(wrap);
   }
-
-  function splitSections(text) {
-    const out = {};
-    const headings = {
-      summary: /^(个人简介|简介|summary|profile)/im,
-      experience: /^(工作经历|工作经验|experience|work(?!\s*experience))/im,
-      projects: /^(项目经历|项目|projects)/im,
-      education: /^(教育背景|教育|education)/im,
-      skills: /^(专业技能|技能|skills)/im,
-      certs: /^(证书|认证|certifications?)/im,
-    };
-    const lines = text.split('\n');
-    let current = null, buf = [];
-    const flush = () => {
-      if (current && buf.length) out[current] = buf.join('\n').trim();
-      buf = [];
-    };
-    for (const line of lines) {
-      const t = line.trim();
-      let matched = null;
-      for (const [key, re] of Object.entries(headings)) {
-        if (re.test(t) && t.length < 20) { matched = key; break; }
-      }
-      if (matched) { flush(); current = matched; }
-      else if (current) buf.push(line);
-      else buf.push(line);
-    }
-    flush();
-    // If no headings found, treat first paragraph as summary
-    if (!out.summary && !out.experience && buf.length) {
-      const paras = text.split(/\n\s*\n/);
-      if (paras.length > 1) {
-        out.summary = paras[0].trim();
-        out.experience = paras.slice(1).join('\n\n').trim();
-      }
-    }
-    return out;
-  }
-
-  function syncInputs() {
-    const map = {
-      fName: 'name', fTitle: 'title', fContact: 'contact',
-      fSummary: 'summary', fExperience: 'experience',
-      fEducation: 'education', fSkills: 'skills', fProjects: 'projects', fCerts: 'certs'
-    };
-    for (const [id, key] of Object.entries(map)) {
-      const el = document.getElementById(id);
-      if (el) el.value = state.data[key] || '';
-    }
-    renderPreview();
-    saveToStorage();
-  }
-
-  // ---------- Photo ----------
-  function bindPhoto() {
-    const input = document.getElementById('photoInput');
-    const preview = document.getElementById('photoPreview');
-    const removeBtn = document.getElementById('photoRemove');
-    input.addEventListener('change', () => {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        state.photo = reader.result;
-        preview.innerHTML = `<img src="${state.photo}" alt="photo">`;
-        removeBtn.style.display = '';
-        renderPreview();
-      };
-      reader.readAsDataURL(file);
-    });
-    removeBtn.addEventListener('click', () => {
-      state.photo = null;
-      preview.innerHTML = '未上传';
-      removeBtn.style.display = 'none';
-      input.value = '';
-      renderPreview();
-    });
-  }
-
-  // ---------- Preview ----------
-  function esc(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function renderPreview() {
-    const tpl = StudioTemplates.get(state.template);
-    const d = state.data;
-    const el = document.getElementById('resumePreview');
-    el.className = 'tpl-' + tpl.id;
-
-    let html = '';
-    if (state.photo) html += `<img class="resume-photo" src="${state.photo}" alt="">`;
-    html += `<h1>${esc(d.name) || '姓名'}</h1>`;
-    if (d.title) html += `<div style="font-size:16px; color:#555; margin-bottom:8px;">${esc(d.title)}</div>`;
-    if (d.contact) html += `<div class="resume-contact">${esc(d.contact)}</div>`;
-
-    if (d.summary) {
-      html += `<div class="resume-section"><h2>${tpl.id === 'classic' ? '个人简介' : '个人简介'}</h2><p style="font-size:14px;">${esc(d.summary).replace(/\n/g, '<br>')}</p></div>`;
-    }
-    if (d.experience) {
-      html += `<div class="resume-section"><h2>工作经历</h2>${renderExperience(d.experience)}</div>`;
-    }
-    if (d.education) {
-      html += `<div class="resume-section"><h2>教育背景</h2><p style="font-size:14px;">${esc(d.education).replace(/\n/g, '<br>')}</p></div>`;
-    }
-    if (d.projects) {
-      html += `<div class="resume-section"><h2>项目经历</h2>${renderExperience(d.projects)}</div>`;
-    }
-    if (d.skills) {
-      html += `<div class="resume-section"><h2>专业技能</h2><p style="font-size:14px;">${esc(d.skills)}</p></div>`;
-    }
-    if (d.certs) {
-      html += `<div class="resume-section"><h2>证书认证</h2><p style="font-size:14px;">${esc(d.certs).replace(/\n/g, '<br>')}</p></div>`;
-    }
-    el.innerHTML = html || '<p style="color:#999;">在左侧输入内容，实时预览简历效果</p>';
-    saveToStorage();
-  }
-
-  function renderExperience(text) {
-    // Flexible parser: handles both single-line "Title | Company | Dates"
-    // and multi-line headers (Title \n Dates \n Company | Location).
-    const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
-    return blocks.map(block => {
-      const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-      if (!lines.length) return '';
-      let title = '', dates = '', company = '';
-      const bullets = [];
-      const dateRe = /(\d{4}\s*年|\d{4}[-/]\d{1,2}|至今|present)/i;
-      let i = 0;
-      // Case 1: first line has pipes -> "Title | Company | Dates"
-      if (lines[0].includes('|')) {
-        const parts = lines[0].split('|').map(s => s.trim());
-        title = parts[0] || ''; company = parts[1] || ''; dates = parts[2] || '';
-        i = 1;
-      } else {
-        // Case 2: multi-line header. Consume leading non-bullet lines.
-        while (i < lines.length && !/^[-•*]/.test(lines[i])) {
-          const ln = lines[i];
-          if (dateRe.test(ln) && !dates) dates = ln;
-          else if (!title) title = ln;
-          else if (!company) company = ln;
-          else break;
-          i++;
-        }
-      }
-      for (; i < lines.length; i++) {
-        const b = lines[i].replace(/^[-•*]\s*/, '').trim();
-        if (b) bullets.push(b);
-      }
-      let html = '<div class="resume-item">';
-      html += `<div class="resume-item-header"><span>${esc(title)}</span><span>${esc(dates)}</span></div>`;
-      if (company) html += `<div class="resume-item-sub">${esc(company)}</div>`;
-      if (bullets.length) {
-        html += '<ul class="resume-bullets">' + bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>';
-      }
-      html += '</div>';
-      return html;
-    }).join('');
-  }
-
-  // ---------- PDF Export ----------
-  async function exportPdf() {
-    // 直接用浏览器打印：所见即所得，文字可选，ATS 可解析
-    // 比手写 pdf-lib 绘制更可靠（无字体嵌入/字距问题）
-    window.print();
-    return;
-    const status = document.getElementById('exportStatus');
-    const btn = document.getElementById('exportPdfBtn');
-    btn.disabled = true;
-    status.textContent = '正在生成...';
-    try {
-      const bytes = await generatePdf();
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `resume-${state.template}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      status.textContent = '已导出';
-    } catch (e) {
-      console.error(e);
-      status.textContent = '导出失败: ' + (e.message || e);
-    } finally {
-      btn.disabled = false;
-      setTimeout(() => status.textContent = '', 3000);
-    }
-  }
-
-  async function generatePdf() {
-    const { PDFDocument, StandardFonts, rgb } = PDFLib;
-    const doc = await PDFDocument.create();
-    const tpl = StudioTemplates.get(state.template);
-    const d = state.data;
-
-    // Fonts: Helvetica for Latin, NotoSansSC for CJK (if available)
-    const helv = await doc.embedFont(StandardFonts.Helvetica);
-    const helvBold = await doc.embedFont(StandardFonts.HelveticaBold);
-    let cjk = null, cjkBold = null;
-    try {
-      const fontBytes = await fetch('/vendor/fonts/NotoSansSC.ttf').then(r => r.arrayBuffer());
-      doc.registerFontkit(fontkit);
-      cjk = await doc.embedFont(fontBytes, { subset: false });
-      cjkBold = cjk; // NotoSansSC has no bold; use same
-    } catch (e) { console.warn('CJK font not available', e); }
-
-    const page = doc.addPage([595, 842]); // A4
-    const { width, height } = page.getSize();
-    const margin = 48;
-    let y = height - margin;
-
-    // WinAnsi-encodable -> standard font, else CJK font (same logic as pdf-engine.js fontRuns)
-    function isStdChar(ch) {
-      try { helv.encodeText(ch); return true; } catch (_) { return false; }
-    }
-    function drawText(text, x, yPos, size, bold, color) {
-      // Split by font runs (same fix as pdf-engine.js)
-      const runs = splitRuns(text, bold);
-      let cx = x;
-      for (const run of runs) {
-        page.drawText(run.text, { x: cx, y: yPos, size, font: run.font, color: color || rgb(0, 0, 0) });
-        cx += run.font.widthOfTextAtSize(run.text, size);
-      }
-      return cx - x;
-    }
-    function splitRuns(text, bold) {
-      const runs = [];
-      let buf = '', bufStd = true;
-      for (const ch of text) {
-        const s = isStdChar(ch);
-        if (buf && s !== bufStd) { runs.push({ text: buf, font: bufStd ? (bold ? helvBold : helv) : (bold ? cjkBold : cjk) }); buf = ''; }
-        buf += ch; bufStd = s;
-      }
-      if (buf) runs.push({ text: buf, font: bufStd ? (bold ? helvBold : helv) : (bold ? cjkBold : cjk) });
-      // Validate CJK coverage
-      for (const r of runs) {
-        if (r.font === cjk || r.font === cjkBold) {
-          // already validated via isStdChar fallback; ensure cjk exists
-          if (!cjk) throw new Error('CJK font not loaded but needed for: ' + r.text.slice(0, 20));
-        }
-      }
-      return runs;
-    }
-    function textWidth(text, size, bold) {
-      return splitRuns(text, bold).reduce((s, r) => s + r.font.widthOfTextAtSize(r.text, size), 0);
-    }
-    function wrapLine(text, maxWidth, size, bold) {
-      // Simple greedy wrap by characters
-      const lines = [];
-      let line = '';
-      for (const ch of text) {
-        if (textWidth(line + ch, size, bold) > maxWidth && line) {
-          lines.push(line); line = ch;
-        } else line += ch;
-      }
-      if (line) lines.push(line);
-      return lines;
-    }
-
-    const contentWidth = width - margin * 2;
-    const accent = tpl.colors.accent;
-
-    // Photo (top right)
-    if (state.photo) {
-      try {
-        const imgBytes = await fetch(state.photo).then(r => r.arrayBuffer());
-        const img = state.photo.includes('png') ? await doc.embedPng(imgBytes) : await doc.embedJpg(imgBytes);
-        const pw = 80, ph = 100;
-        page.drawImage(img, { x: width - margin - pw, y: y - ph, width: pw, height: ph });
-      } catch (e) { console.warn('photo embed failed', e); }
-    }
-
-    // Name
-    const nameSize = 26;
-    drawText(d.name || '姓名', margin, y - nameSize, nameSize, true);
-    y -= nameSize + 8;
-    if (d.title) {
-      drawText(d.title, margin, y - 14, 14, false, rgb(0.33, 0.33, 0.33));
-      y -= 20;
-    }
-    if (d.contact) {
-      drawText(d.contact, margin, y - 12, 12, false, rgb(0.33, 0.33, 0.33));
-      y -= 24;
-    }
-
-    // Helper for section
-    function section(title, contentFn) {
-      y -= 8;
-      // Section title
-      const tSize = 14;
-      drawText(title, margin, y - tSize, tSize, true, hexToRgb(accent));
-      y -= tSize + 4;
-      // Line
-      page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: hexToRgb(tpl.colors.line) });
-      y -= 12;
-      contentFn();
-    }
-    function hexToRgb(hex) {
-      const h = hex.replace('#', '');
-      return rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
-    }
-    function paragraph(text, size) {
-      const lines = wrapLine(text, contentWidth, size, false);
-      for (const line of lines) {
-        if (y < margin + 20) { /* TODO: new page */ break; }
-        drawText(line, margin, y - size, size, false);
-        y -= size * 1.5;
-      }
-      y -= 4;
-    }
-
-    if (d.summary) section('个人简介', () => paragraph(d.summary, 11));
-    if (d.experience) {
-      section('工作经历', () => {
-        const blocks = d.experience.split(/\n\s*\n/).filter(b => b.trim());
-        for (const block of blocks) {
-          const lines = block.split('\n').filter(l => l.trim());
-          if (!lines.length) continue;
-          const header = lines[0].split('|').map(s => s.trim());
-          // Title + dates
-          const tSize = 12;
-          drawText(header[0] || '', margin, y - tSize, tSize, true);
-          if (header[2]) {
-            const dw = textWidth(header[2], 11, false);
-            drawText(header[2], width - margin - dw, y - 11, 11, false, rgb(0.33,0.33,0.33));
-          }
-          y -= tSize + 4;
-          if (header[1]) {
-            drawText(header[1], margin, y - 11, 11, false, rgb(0.33,0.33,0.33));
-            y -= 16;
-          }
-          for (const bullet of lines.slice(1)) {
-            const bt = bullet.replace(/^[-•*]\s*/, '');
-            const lines2 = wrapLine('• ' + bt, contentWidth - 12, 11, false);
-            for (const l of lines2) {
-              drawText(l, margin + 12, y - 11, 11, false);
-              y -= 16;
-            }
-          }
-          y -= 8;
-        }
-      });
-    }
-    if (d.projects) {
-      section('项目经历', () => {
-        const blocks = d.projects.split(/\n\s*\n/).filter(b => b.trim());
-        for (const block of blocks) {
-          const lines = block.split('\n').filter(l => l.trim());
-          if (!lines.length) continue;
-          const header = lines[0].split('|').map(s => s.trim());
-          const tSize = 12;
-          drawText(header[0] || '', margin, y - tSize, tSize, true);
-          y -= tSize + 4;
-          if (header[1]) {
-            drawText(header[1], margin, y - 11, 11, false, rgb(0.33,0.33,0.33));
-            y -= 16;
-          }
-          for (const bullet of lines.slice(1)) {
-            const bt = bullet.replace(/^[-•*]\s*/, '');
-            const lines2 = wrapLine('• ' + bt, contentWidth - 12, 11, false);
-            for (const l of lines2) {
-              drawText(l, margin + 12, y - 11, 11, false);
-              y -= 16;
-            }
-          }
-          y -= 8;
-        }
-      });
-    }
-    if (d.education) section('教育背景', () => paragraph(d.education, 11));
-    if (d.skills) section('专业技能', () => paragraph(d.skills, 11));
-    if (d.certs) section('证书认证', () => paragraph(d.certs, 11));
-
-    return await doc.save();
-  }
-
-  // ---------- Init ----------
-  function init() {
-    renderTemplateGrid();
-    bindInputs();
-    bindPhoto();
-    loadFromStorage();
-    renderPreview();
-    document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
-    const printBtn = document.getElementById('printBtn');
-    if (printBtn) printBtn.addEventListener('click', () => window.print());
-    document.getElementById('loadAiBtn').addEventListener('click', () => {
-      const t = localStorage.getItem('checkats_ai_rewrite');
-      if (t) { parseAiRewrite(t); localStorage.removeItem('checkats_ai_rewrite'); }
-      else alert('没有找到AI改写内容，请先在首页完成AI改写');
-    });
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      if (!confirm('清空所有内容？')) return;
-      state.data = { name:'', title:'', contact:'', summary:'', experience:'', projects:'', education:'', skills:'', certs:'' };
-      state.photo = null;
-      document.getElementById('photoPreview').innerHTML = '未上传';
-      document.getElementById('photoRemove').style.display = 'none';
-      syncInputs();
-    });
-    // Auto-save on input (already in bindInputs via renderPreview)
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
+  try{const draft=JSON.parse(sessionStorage.getItem('checkats_studio_draft')||'null');if(draft){state={...state,...draft,data:engine.validate(draft.data)};state.template=StudioTemplates.get(state.template).id;if(['en','zh'].includes(draft.uiLanguage))lang=draft.uiLanguage;notice(t('restore'));}
+    const handoff=JSON.parse(sessionStorage.getItem('checkats_studio_handoff')||'null');
+    const legacy=localStorage.getItem('checkats_ai_rewrite');
+    const text=handoff?.text||legacy;
+    if(typeof text==='string'&&text.trim()){if(['en','zh'].includes(handoff?.lang))lang=handoff.lang;state.data=engine.parse(text);state.photo=null;state.contentLanguage=/[\u3400-\u9fff]/.test(text)?'zh':'en';sessionStorage.removeItem('checkats_studio_handoff');localStorage.removeItem('checkats_ai_rewrite');notice(t('imported'));}
+  }catch(_){notice(t('storageFail'),true);}
+  for(const[id,key]of Object.entries(map))$(id).addEventListener('input',()=>{state.data[key]=$(id).value;schedule();});
+  for(const[id,key]of [['paper','paper'],['fontSize','size'],['contentLanguage','contentLanguage']])$(id).addEventListener('change',()=>{state[key]=$(id).value;schedule();});
+  document.querySelectorAll('[data-lang]').forEach(button=>button.addEventListener('click',()=>{lang=button.dataset.lang;state.uiLanguage=lang;language();save();}));
+  $('applyText').addEventListener('click',()=>{if(!$('rawResume').value.trim())return notice(t('noText'),true);apply($('rawResume').value);notice(t('loaded'));});
+  $('photoInput').addEventListener('change',()=>photo($('photoInput').files[0]));
+  $('photoRemove').addEventListener('click',()=>{photoVersion++;state.photo=null;photoPreview();$('photoStatus').textContent='';schedule();});
+  $('clearBtn').addEventListener('click',()=>{if(!confirm(t('confirmClear')))return;photoVersion++;state.data=engine.blank();state.photo=null;$('rawResume').value='';$('photoStatus').textContent='';sync();schedule();$('resumePreview').replaceChildren();notice(t('cleared'));});
+  $('exportPdfBtn').addEventListener('click',()=>{
+    if(!result)return;const url=URL.createObjectURL(new Blob([result.bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=url;a.download=(state.data.name||'resume').replace(/[^\p{L}\p{N}_-]/gu,'_')+'-'+state.template+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  language();sync();if(Object.values(state.data).some(Boolean))schedule();else $('importDetails').open=true;
 })();

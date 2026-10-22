@@ -1,223 +1,52 @@
-<!DOCTYPE html>
-<html lang="zh">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>简历工作台 - CheckATS</title>
-<link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="/styles/design.css" />
-<link rel="stylesheet" href="/styles/components.css" />
-<style>
-  .studio-wrap {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 32px 24px;
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-  @media (max-width: 900px) {
-    .studio-wrap { grid-template-columns: 1fr; }
-  }
-  .studio-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 20px;
-  }
-  .studio-card h2 {
-    font-size: 18px;
-    margin: 0 0 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .studio-card h3 {
-    font-size: 15px;
-    margin: 20px 0 12px;
-    color: var(--ink);
-  }
-  .studio-card h3:first-of-type { margin-top: 0; }
-  .field { margin-bottom: 16px; }
-  .field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--ink);
-  }
-  .field input, .field textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-family: inherit;
-    background: var(--bg);
-    color: var(--ink);
-    box-sizing: border-box;
-  }
-  .field input:focus, .field textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  .field textarea { min-height: 100px; resize: vertical; }
-  .template-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-  .template-card {
-    border: 2px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 16px 12px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s var(--ease);
-    background: var(--bg);
-  }
-  .template-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .template-card.active {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
-  .template-card .tname { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
-  .template-card .tdesc { font-size: 12px; color: var(--muted); line-height: 1.5; }
-  .photo-row { display: flex; align-items: center; gap: 12px; }
-  .photo-preview {
-    width: 80px; height: 100px;
-    border: 1px dashed var(--line-strong);
-    border-radius: var(--radius-md);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; font-size: 12px; color: var(--muted);
-    background: var(--bg);
-  }
-  .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-  .studio-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-  #resumePreview {
-    background: white;
-    min-height: 800px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 48px;
-    box-shadow: var(--shadow-sm);
-  }
-  /* 简历模板预览样式 */
-  .tpl-classic { font-family: Georgia, "Times New Roman", "Songti SC", serif; color: #1a1a1a; }
-  .tpl-classic h1 { font-size: 28px; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin: 0 0 8px; }
-  .tpl-classic h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #ccc; padding-bottom: 6px; margin: 22px 0 12px; }
-  .tpl-modern { font-family: 'DM Sans', 'Noto Sans SC', sans-serif; color: #1a1a1a; }
-  .tpl-modern h1 { font-size: 30px; margin: 0 0 6px; }
-  .tpl-modern h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2.5px; color: #b44d30; margin: 22px 0 12px; border-bottom: 2px solid #b44d30; padding-bottom: 6px; }
-  .tpl-minimal { font-family: 'DM Sans', 'Noto Sans SC', sans-serif; color: #2a2a2a; }
-  .tpl-minimal h1 { font-size: 26px; font-weight: 300; letter-spacing: 1px; margin: 0 0 8px; }
-  .tpl-minimal h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 3px; color: #888; margin: 26px 0 12px; }
-  .resume-contact { color: #555; font-size: 14px; margin-bottom: 8px; }
-  .resume-section { margin-bottom: 16px; }
-  .resume-item { margin-bottom: 14px; }
-  .resume-item-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; font-size: 15px; }
-  .resume-item-sub { color: #555; font-size: 14px; margin-bottom: 6px; }
-  .resume-bullets { padding-left: 20px; font-size: 14px; margin: 0; }
-  .resume-bullets li { margin-bottom: 5px; line-height: 1.6; }
-  .resume-photo { float: right; width: 100px; height: 125px; object-fit: cover; border-radius: 4px; margin: 0 0 16px 16px; }
-  @media print {
-    .nav-shell, .studio-sidebar, .studio-actions, .page-title { display: none !important; }
-    .studio-wrap { display: block; max-width: none; padding: 0; }
-    #resumePreview { border: none; box-shadow: none; border-radius: 0; padding: 20px; }
-    body { background: white !important; }
-  }
-</style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resume PDF Studio | CheckATS</title>
+  <meta name="description" content="Turn your rewritten resume into a native PDF. Choose a template, edit the content and add an optional photo, locally in your browser.">
+  <link rel="canonical" href="https://checkats.online/studio/">
+  <link rel="icon" href="/brand-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles/components.css"><link rel="stylesheet" href="/styles/design.css">
+  <link rel="stylesheet" href="/studio/studio.css">
 </head>
 <body>
-  <header class="nav-shell">
-    <nav class="nav" aria-label="Main navigation">
-      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg class="brand-symbol" viewBox="0 0 64 64" fill="#B44D30"><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(90 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(180 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(270 32 32)"/><path d="m32 28 4 4-4 4-4-4Z"/></svg></span><span>CheckATS</span></a>
-      <div class="nav-links">
-        <a href="/">← 返回首页</a>
-      </div>
-    </nav>
-  </header>
-
-  <main>
-    <div class="studio-wrap">
-      <div class="studio-sidebar">
-        <div class="studio-card">
-          <h2>选择模板</h2>
-          <div class="template-grid" id="templateGrid"></div>
-        </div>
-
-        <div class="studio-card">
-          <h2>基本信息</h2>
-          <div class="field">
-            <label>姓名</label>
-            <input type="text" id="fName" placeholder="张三">
-          </div>
-          <div class="field">
-            <label>求职意向 / 标题</label>
-            <input type="text" id="fTitle" placeholder="软件工程师">
-          </div>
-          <div class="field">
-            <label>联系方式（邮箱 | 电话 | 城市）</label>
-            <input type="text" id="fContact" placeholder="zhangsan@example.com | 138-0000-0000 | 北京">
-          </div>
-          <div class="field">
-            <label>照片（可选）</label>
-            <div class="photo-row">
-              <div class="photo-preview" id="photoPreview">未上传</div>
-              <button class="button button-secondary button-sm" id="photoBtn">上传照片</button>
-              <button class="button button-secondary button-sm" id="photoRemove" style="display:none">删除</button>
-              <input type="file" id="photoInput" accept="image/*" style="display:none">
-            </div>
-          </div>
-        </div>
-
-        <div class="studio-card">
-          <button class="button button-secondary" id="loadAiBtn" style="width:100%">从 AI 改写结果载入</button>
-        </div>
-
-        <div class="studio-card">
-          <h2>简历内容</h2>
-          <h3>个人简介</h3>
-          <div class="field"><textarea id="fSummary" placeholder="3-5 年经验..."></textarea></div>
-          <h3>工作经历</h3>
-          <div class="field"><textarea id="fExperience" style="min-height:160px" placeholder="职位 | 公司 | 时间&#10;- 描述..."></textarea></div>
-          <h3>项目经历</h3>
-          <div class="field"><textarea id="fProjects" placeholder="项目名 | 技术栈&#10;- 描述..."></textarea></div>
-          <h3>教育背景</h3>
-          <div class="field"><textarea id="fEducation" placeholder="学校 | 专业 | 时间"></textarea></div>
-          <h3>专业技能</h3>
-          <div class="field"><input type="text" id="fSkills" placeholder="Python, React"></div>
-          <h3>证书认证</h3>
-          <div class="field"><textarea id="fCerts" style="min-height:60px" placeholder="每行一个"></textarea></div>
-        </div>
-
-        <div class="studio-card">
-          <div class="studio-actions">
-            <button class="button button-secondary" id="printBtn">打印 / 另存为PDF</button>
-            <button class="button button-primary" id="exportPdfBtn">导出 PDF</button>
-            <button class="button button-secondary" id="clearBtn">清空</button>
-          </div>
-          <div id="exportStatus" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
-        </div>
-      </div>
-
-      <div class="studio-main">
-        <div class="studio-card">
-          <h2>实时预览</h2>
-          <div id="resumePreview"></div>
-        </div>
-      </div>
+  <header class="nav-shell"><nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="/"><img src="/brand-mark.svg" width="30" height="30" alt=""><span>CheckATS</span></a>
+    <div class="nav-links"><a href="/" data-i18n="back">← Back to analyzer</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="zh" aria-pressed="false">中文</button></div>
+  </nav></header>
+  <main class="studio-shell">
+    <section class="studio-intro"><p class="eyebrow">THE FINISHING TOUCH</p><h1 data-i18n="title">Your story. Ready to send.</h1><p data-i18n="intro">Choose a layout, make it yours, and leave with a readable PDF.</p><p class="local-badge" data-i18n="privacy">Content and photos stay in this browser. No account needed.</p></section>
+    <p id="handoffStatus" class="studio-notice" role="status" aria-live="polite"></p>
+    <div class="studio-layout">
+      <aside class="studio-sidebar" aria-label="Resume editor">
+        <section class="studio-card"><p class="eyebrow" data-i18n="stepOne">01 / CHOOSE A LOOK</p><h2 data-i18n="templates">A layout that fits you.</h2><div class="template-grid" id="templateGrid"></div><p class="studio-small" id="templateCredit"></p><a class="studio-small" href="/studio/credits.html" target="_blank" rel="noopener" data-i18n="credits">Template sources & licenses ↗</a>
+          <div class="settings-row"><label><span data-i18n="paper">Paper</span><select id="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label><label><span data-i18n="fontSize">Text size</span><select id="fontSize"><option value="9.5">9.5 pt</option><option value="10.5" selected>10.5 pt</option><option value="11.5">11.5 pt</option></select></label><label><span data-i18n="headingLanguage">PDF headings</span><select id="contentLanguage"><option value="en">English</option><option value="zh">中文</option></select></label></div>
+        </section>
+        <section class="studio-card"><p class="eyebrow" data-i18n="stepTwo">02 / MAKE IT YOURS</p><h2 data-i18n="details">The person behind the page.</h2>
+          <div class="studio-field"><label for="fName" data-i18n="name">Full name</label><input id="fName" maxlength="120" autocomplete="name"></div>
+          <div class="studio-field"><label for="fTitle" data-i18n="role">Professional title</label><input id="fTitle" maxlength="200"></div>
+          <div class="studio-field"><label for="fContact" data-i18n="contact">Contact details & links</label><textarea id="fContact" rows="3" maxlength="1500"></textarea></div>
+          <div class="photo-row"><div id="photoPreview" class="photo-preview" aria-hidden="true">＋</div><div><label class="button button-secondary button-sm" for="photoInput" data-i18n="uploadPhoto">Add a photo</label><input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="photo-file"><button id="photoRemove" class="button button-quiet button-sm" type="button" hidden data-i18n="removePhoto">Remove</button><p class="studio-small" data-i18n="photoHint">Optional · JPG, PNG or WebP · up to 5 MB. Center-cropped for the header.</p></div></div>
+          <p id="photoStatus" class="studio-small" role="status"></p>
+        </section>
+        <section class="studio-card"><h2 data-i18n="content">Words worth keeping.</h2><p class="studio-small" data-i18n="contentHint">Review the imported sections. Unknown content is kept under Additional information.</p>
+          <details id="importDetails"><summary data-i18n="paste">Paste a complete resume</summary><label class="sr-only" for="rawResume" data-i18n="raw">Complete resume text</label><textarea id="rawResume" rows="7" maxlength="60000"></textarea><button id="applyText" class="button button-secondary button-sm" type="button" data-i18n="apply">Apply to fields</button><p class="studio-small" data-i18n="replaceHint">Replaces the fields below. Your template and photo stay selected.</p></details>
+          <div id="sectionFields"></div>
+          <button id="clearBtn" type="button" class="button button-quiet button-sm" data-i18n="clear">Clear this draft</button>
+        </section>
+      </aside>
+      <section class="studio-preview" aria-label="PDF preview">
+        <div class="preview-toolbar"><div><p class="eyebrow" data-i18n="stepThree">03 / READY WHEN YOU ARE</p><h2 data-i18n="preview">Your PDF, as it will download.</h2></div><button id="exportPdfBtn" type="button" class="button button-primary" disabled data-i18n="download">Download PDF</button></div>
+        <p id="exportStatus" class="studio-status" role="status" aria-live="polite"></p>
+        <p id="draftStatus" class="studio-small"></p>
+        <div id="resumePreview"><div class="preview-empty" data-i18n="empty">Your resume will appear here. Start with your rewrite or paste your text.</div></div>
+        <p class="studio-small preview-footnote" data-i18n="footnote">Selectable text, automatic page breaks, no watermark. Review every page before sending.</p>
+      </section>
     </div>
   </main>
-
-<script src="./studio.js"></script>
+  <script src="/vendor/pdf-lib.min.js"></script><script src="/vendor/fontkit.umd.min.js"></script>
+  <script>window.studioPdfReady=import('/vendor/pdf.min.mjs').then(p=>{window.pdfjsLib=p;p.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';});window.studioPdfReady.catch(()=>{});</script>
+  <script src="/studio/templates.js"></script><script src="/studio/engine.js"></script><script src="/studio/studio.js"></script>
 </body>
 </html>
