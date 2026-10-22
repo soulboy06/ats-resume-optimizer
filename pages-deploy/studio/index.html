@@ -4,299 +4,220 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>简历工作台 - CheckATS</title>
-<link rel="icon" href="/favicon.ico">
+<link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/styles/design.css" />
+<link rel="stylesheet" href="/styles/components.css" />
 <style>
-  :root {
-    color-scheme: light;
-    --bg: #f8f5ee;
-    --card: #fffdf8;
-    --text: #292b24;
-    --muted: #686b5d;
-    --accent: #b44d30;
-    --accent-dark: #a84429;
-    --line: #dcd8cc;
-    background-color: var(--bg);
-    background-image:
-      linear-gradient(to right, rgb(107 119 97 / 12%) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(107 119 97 / 12%) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.6;
-  }
-  .header {
-    background: var(--card);
-    border-bottom: 1px solid var(--line);
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header h1 { font-size: 20px; font-weight: 600; }
-  .header a { color: var(--accent); text-decoration: none; font-size: 14px; }
-  .container {
+  .studio-wrap {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 32px 24px;
     display: grid;
     grid-template-columns: 380px 1fr;
     gap: 24px;
+    align-items: start;
   }
   @media (max-width: 900px) {
-    .container { grid-template-columns: 1fr; }
+    .studio-wrap { grid-template-columns: 1fr; }
   }
-  .panel {
-    background: var(--card);
+  .studio-card {
+    background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 4px 14px rgb(75 61 43 / 5%);
-    backdrop-filter: blur(8px);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
   }
-  .panel h2 {
-    font-size: 16px;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
+  .studio-card h2 {
+    font-size: 18px;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--line);
   }
+  .studio-card h3 {
+    font-size: 15px;
+    margin: 20px 0 12px;
+    color: var(--ink);
+  }
+  .studio-card h3:first-of-type { margin-top: 0; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .field input, .field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--ink);
+    box-sizing: border-box;
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field textarea { min-height: 100px; resize: vertical; }
   .template-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    margin-bottom: 20px;
   }
   .template-card {
     border: 2px solid var(--line);
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: var(--radius-md);
+    padding: 16px 12px;
     cursor: pointer;
     text-align: center;
-    transition: all 0.2s;
+    transition: all 0.2s var(--ease);
+    background: var(--bg);
   }
-  .template-card:hover { border-color: var(--accent); }
+  .template-card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .template-card.active {
     border-color: var(--accent);
-    background: #fef9f3;
+    background: var(--accent-soft);
   }
-  .template-card .tname { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-  .template-card .tdesc { font-size: 12px; color: var(--muted); }
-  .form-group { margin-bottom: 16px; }
-  .form-group label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 6px;
-  }
-  .form-group input[type="text"],
-  .form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  .form-group textarea { min-height: 80px; resize: vertical; }
-  .photo-upload {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  .template-card .tname { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .template-card .tdesc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .photo-row { display: flex; align-items: center; gap: 12px; }
   .photo-preview {
-    width: 80px;
-    height: 100px;
-    border: 1px dashed var(--line);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    font-size: 12px;
-    color: var(--muted);
+    width: 80px; height: 100px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; font-size: 12px; color: var(--muted);
+    background: var(--bg);
   }
   .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-  .btn {
-    display: inline-block;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
+  .studio-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
   }
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-  }
-  .btn-primary:hover { background: var(--accent-dark); }
-  .btn-secondary {
-    background: var(--card);
-    border: 1px solid var(--line);
-    color: var(--text);
-  }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .preview-panel { position: sticky; top: 80px; align-self: start; }
   #resumePreview {
     background: white;
     min-height: 800px;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 40px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: var(--radius-md);
+    padding: 48px;
+    box-shadow: var(--shadow-sm);
   }
-  .actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 20px;
-  }
-  .section-editor { margin-bottom: 20px; }
-  .section-editor h3 {
-    font-size: 14px;
-    margin-bottom: 8px;
-    color: var(--muted);
-  }
-  /* Template-specific preview styles */
-  .tpl-classic { font-family: Georgia, "Times New Roman", serif; }
-  .tpl-classic h1 { font-size: 28px; border-bottom: 2px solid #1a1a1a; padding-bottom: 8px; margin-bottom: 8px; }
-  .tpl-classic h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin: 20px 0 10px; }
-  .tpl-modern { font-family: -apple-system, "Segoe UI", sans-serif; }
-  .tpl-modern h1 { font-size: 28px; color: #1a1a1a; margin-bottom: 4px; }
-  .tpl-modern h1 .accent { color: #2563eb; }
-  .tpl-modern h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #2563eb; margin: 20px 0 10px; }
-  .tpl-minimal { font-family: -apple-system, "Segoe UI", sans-serif; }
-  .tpl-minimal h1 { font-size: 26px; font-weight: 300; letter-spacing: 1px; margin-bottom: 8px; }
-  .tpl-minimal h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 3px; color: #888; margin: 24px 0 10px; }
-  .resume-contact { color: #555; font-size: 14px; margin-bottom: 16px; }
+  /* 简历模板预览样式 */
+  .tpl-classic { font-family: Georgia, "Times New Roman", "Songti SC", serif; color: #1a1a1a; }
+  .tpl-classic h1 { font-size: 28px; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin: 0 0 8px; }
+  .tpl-classic h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #ccc; padding-bottom: 6px; margin: 22px 0 12px; }
+  .tpl-modern { font-family: 'DM Sans', 'Noto Sans SC', sans-serif; color: #1a1a1a; }
+  .tpl-modern h1 { font-size: 30px; margin: 0 0 6px; }
+  .tpl-modern h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2.5px; color: #b44d30; margin: 22px 0 12px; border-bottom: 2px solid #b44d30; padding-bottom: 6px; }
+  .tpl-minimal { font-family: 'DM Sans', 'Noto Sans SC', sans-serif; color: #2a2a2a; }
+  .tpl-minimal h1 { font-size: 26px; font-weight: 300; letter-spacing: 1px; margin: 0 0 8px; }
+  .tpl-minimal h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 3px; color: #888; margin: 26px 0 12px; }
+  .resume-contact { color: #555; font-size: 14px; margin-bottom: 8px; }
   .resume-section { margin-bottom: 16px; }
-  .resume-item { margin-bottom: 12px; }
-  .resume-item-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
-  .resume-item-sub { color: #555; font-size: 14px; margin-bottom: 4px; }
-  .resume-bullets { padding-left: 20px; font-size: 14px; }
-  .resume-bullets li { margin-bottom: 4px; }
-  .resume-photo {
-    float: right;
-    width: 100px;
-    height: 125px;
-    object-fit: cover;
-    border-radius: 4px;
-    margin-left: 16px;
-  }
-
+  .resume-item { margin-bottom: 14px; }
+  .resume-item-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; font-size: 15px; }
+  .resume-item-sub { color: #555; font-size: 14px; margin-bottom: 6px; }
+  .resume-bullets { padding-left: 20px; font-size: 14px; margin: 0; }
+  .resume-bullets li { margin-bottom: 5px; line-height: 1.6; }
+  .resume-photo { float: right; width: 100px; height: 125px; object-fit: cover; border-radius: 4px; margin: 0 0 16px 16px; }
   @media print {
-    .header, .panel:first-child, .actions { display: none !important; }
-    .container { display: block; max-width: none; padding: 0; }
-    #resumePreview { border: none; box-shadow: none; }
-    body { background: white; }
+    .nav-shell, .studio-sidebar, .studio-actions, .page-title { display: none !important; }
+    .studio-wrap { display: block; max-width: none; padding: 0; }
+    #resumePreview { border: none; box-shadow: none; border-radius: 0; padding: 20px; }
+    body { background: white !important; }
   }
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>简历工作台</h1>
-  <a href="/">← 返回首页</a>
-</div>
+  <header class="nav-shell">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg class="brand-symbol" viewBox="0 0 64 64" fill="#B44D30"><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(90 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(180 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(270 32 32)"/><path d="m32 28 4 4-4 4-4-4Z"/></svg></span><span>CheckATS</span></a>
+      <div class="nav-links">
+        <a href="/">← 返回首页</a>
+      </div>
+    </nav>
+  </header>
 
-<div class="container">
-  <div>
-    <div class="panel">
-      <h2>选择模板</h2>
-      <div class="template-grid" id="templateGrid"></div>
-    </div>
+  <main>
+    <div class="studio-wrap">
+      <div class="studio-sidebar">
+        <div class="studio-card">
+          <h2>选择模板</h2>
+          <div class="template-grid" id="templateGrid"></div>
+        </div>
 
-    <div class="panel" style="margin-top: 16px;">
-      <h2>基本信息</h2>
-      <div class="form-group">
-        <label>姓名</label>
-        <input type="text" id="fName" placeholder="张三">
-      </div>
-      <div class="form-group">
-        <label>求职意向 / 标题</label>
-        <input type="text" id="fTitle" placeholder="软件工程师">
-      </div>
-      <div class="form-group">
-        <label>联系方式（邮箱 | 电话 | 城市）</label>
-        <input type="text" id="fContact" placeholder="zhangsan@example.com | 138-0000-0000 | 北京">
-      </div>
-      <div class="form-group">
-        <label>照片（可选）</label>
-        <div class="photo-upload">
-          <div class="photo-preview" id="photoPreview">未上传</div>
-          <div>
-            <input type="file" id="photoInput" accept="image/*" style="display:none">
-            <button class="btn btn-secondary" onclick="document.getElementById('photoInput').click()">上传照片</button>
-            <button class="btn btn-secondary" id="photoRemove" style="display:none; margin-top: 8px;">移除</button>
+        <div class="studio-card">
+          <h2>基本信息</h2>
+          <div class="field">
+            <label>姓名</label>
+            <input type="text" id="fName" placeholder="张三">
+          </div>
+          <div class="field">
+            <label>求职意向 / 标题</label>
+            <input type="text" id="fTitle" placeholder="软件工程师">
+          </div>
+          <div class="field">
+            <label>联系方式（邮箱 | 电话 | 城市）</label>
+            <input type="text" id="fContact" placeholder="zhangsan@example.com | 138-0000-0000 | 北京">
+          </div>
+          <div class="field">
+            <label>照片（可选）</label>
+            <div class="photo-row">
+              <div class="photo-preview" id="photoPreview">未上传</div>
+              <button class="button button-secondary button-sm" id="photoBtn">上传照片</button>
+              <button class="button button-secondary button-sm" id="photoRemove" style="display:none">删除</button>
+              <input type="file" id="photoInput" accept="image/*" style="display:none">
+            </div>
           </div>
         </div>
+
+        <div class="studio-card">
+          <button class="button button-secondary" id="loadAiBtn" style="width:100%">从 AI 改写结果载入</button>
+        </div>
+
+        <div class="studio-card">
+          <h2>简历内容</h2>
+          <h3>个人简介</h3>
+          <div class="field"><textarea id="fSummary" placeholder="3-5 年经验..."></textarea></div>
+          <h3>工作经历</h3>
+          <div class="field"><textarea id="fExperience" style="min-height:160px" placeholder="职位 | 公司 | 时间&#10;- 描述..."></textarea></div>
+          <h3>项目经历</h3>
+          <div class="field"><textarea id="fProjects" placeholder="项目名 | 技术栈&#10;- 描述..."></textarea></div>
+          <h3>教育背景</h3>
+          <div class="field"><textarea id="fEducation" placeholder="学校 | 专业 | 时间"></textarea></div>
+          <h3>专业技能</h3>
+          <div class="field"><input type="text" id="fSkills" placeholder="Python, React"></div>
+          <h3>证书认证</h3>
+          <div class="field"><textarea id="fCerts" style="min-height:60px" placeholder="每行一个"></textarea></div>
+        </div>
+
+        <div class="studio-card">
+          <div class="studio-actions">
+            <button class="button button-secondary" id="printBtn">打印 / 另存为PDF</button>
+            <button class="button button-primary" id="exportPdfBtn">导出 PDF</button>
+            <button class="button button-secondary" id="clearBtn">清空</button>
+          </div>
+          <div id="exportStatus" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="studio-main">
+        <div class="studio-card">
+          <h2>实时预览</h2>
+          <div id="resumePreview"></div>
+        </div>
       </div>
     </div>
+  </main>
 
-    <div class="panel" style="margin-top: 16px;">
-      <h2>简历内容</h2>
-      <div class="section-editor">
-        <h3>个人简介</h3>
-        <div class="form-group">
-          <textarea id="fSummary" placeholder="3-5年经验概述..."></textarea>
-        </div>
-      </div>
-      <div class="section-editor">
-        <h3>工作经历（每段经历用空行分隔，格式：职位 | 公司 | 时间）</h3>
-        <div class="form-group">
-          <textarea id="fExperience" style="min-height: 160px;" placeholder="高级软件工程师 | 某某科技 | 2022年3月 - 至今&#10;- 负责...&#10;- 主导...&#10;&#10;软件工程师 | 另一家公司 | 2020年7月 - 2022年2月&#10;- 参与..."></textarea>
-        </div>
-      </div>
-      <div class="section-editor">
-        <h3>项目经历（格式同工作经历）</h3>
-        <div class="form-group">
-          <textarea id="fProjects" style="min-height: 120px;" placeholder="项目名称 | 技术栈&#10;- 描述..."></textarea>
-        </div>
-      </div>
-      <div class="section-editor">
-        <h3>教育背景</h3>
-        <div class="form-group">
-          <textarea id="fEducation" placeholder="某某大学 | 计算机科学学士 | 2016年9月 - 2020年6月"></textarea>
-        </div>
-      </div>
-      <div class="section-editor">
-        <h3>专业技能（逗号分隔）</h3>
-        <div class="form-group">
-          <input type="text" id="fSkills" placeholder="Python, FastAPI, React, PostgreSQL">
-        </div>
-      </div>
-      <div class="section-editor">
-        <h3>证书认证（每行一个）</h3>
-        <div class="form-group">
-          <textarea id="fCerts" placeholder="AWS Certified Solutions Architect&#10;PMP"></textarea>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn btn-secondary" id="loadAiBtn">从AI改写载入</button>
-        <button class="btn btn-secondary" id="clearBtn">清空</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel preview-panel">
-    <h2>实时预览</h2>
-    <div id="resumePreview"></div>
-    <div class="actions">
-      <button class="btn btn-secondary" id="printBtn" style="margin-right:8px;">打印 / 另存为PDF</button>
-      <button class="btn btn-primary" id="exportPdfBtn">导出 PDF</button>
-      <span id="exportStatus" style="font-size: 14px; color: var(--muted); align-self: center;"></span>
-    </div>
-  </div>
-</div>
-
-<script src="/vendor/pdf-lib.min.js"></script>
-<script src="/vendor/fontkit.umd.min.js"></script>
-<script src="templates.js"></script>
-<script src="studio.js"></script>
+<script src="./studio.js"></script>
 </body>
 </html>
