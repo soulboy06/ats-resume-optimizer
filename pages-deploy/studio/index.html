@@ -7,16 +7,23 @@
 <link rel="icon" href="/favicon.ico">
 <style>
   :root {
-    --bg: #faf8f3;
-    --card: #ffffff;
-    --text: #1a1a1a;
-    --muted: #666;
-    --accent: #c4744f;
-    --line: #e8e2d6;
+    color-scheme: light;
+    --bg: #f8f5ee;
+    --card: #fffdf8;
+    --text: #292b24;
+    --muted: #686b5d;
+    --accent: #b44d30;
+    --accent-dark: #a84429;
+    --line: #dcd8cc;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(to right, rgb(107 119 97 / 12%) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(107 119 97 / 12%) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
@@ -48,8 +55,10 @@
   .panel {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 20px;
     padding: 20px;
+    box-shadow: 0 4px 14px rgb(75 61 43 / 5%);
+    backdrop-filter: blur(8px);
   }
   .panel h2 {
     font-size: 16px;
@@ -127,7 +136,7 @@
     background: var(--accent);
     color: white;
   }
-  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:hover { background: var(--accent-dark); }
   .btn-secondary {
     background: var(--card);
     border: 1px solid var(--line);
@@ -237,6 +246,12 @@
         </div>
       </div>
       <div class="section-editor">
+        <h3>项目经历（格式同工作经历）</h3>
+        <div class="form-group">
+          <textarea id="fProjects" style="min-height: 120px;" placeholder="项目名称 | 技术栈&#10;- 描述..."></textarea>
+        </div>
+      </div>
+      <div class="section-editor">
         <h3>教育背景</h3>
         <div class="form-group">
           <textarea id="fEducation" placeholder="某某大学 | 计算机科学学士 | 2016年9月 - 2020年6月"></textarea>
@@ -246,6 +261,12 @@
         <h3>专业技能（逗号分隔）</h3>
         <div class="form-group">
           <input type="text" id="fSkills" placeholder="Python, FastAPI, React, PostgreSQL">
+        </div>
+      </div>
+      <div class="section-editor">
+        <h3>证书认证（每行一个）</h3>
+        <div class="form-group">
+          <textarea id="fCerts" placeholder="AWS Certified Solutions Architect&#10;PMP"></textarea>
         </div>
       </div>
       <div class="actions">

@@ -12,8 +12,10 @@
       contact: '',
       summary: '',
       experience: '',
+      projects: '',
       education: '',
       skills: '',
+      certs: '',
     }
   };
 
@@ -41,10 +43,11 @@
     const map = {
       fName: 'name', fTitle: 'title', fContact: 'contact',
       fSummary: 'summary', fExperience: 'experience',
-      fEducation: 'education', fSkills: 'skills'
+      fEducation: 'education', fSkills: 'skills', fProjects: 'projects', fCerts: 'certs'
     };
     for (const [id, key] of Object.entries(map)) {
       const el = document.getElementById(id);
+      if (!el) continue;
       el.value = state.data[key] || '';
       el.addEventListener('input', () => {
         state.data[key] = el.value;
@@ -98,6 +101,8 @@
     if (sections.experience) state.data.experience = sections.experience;
     if (sections.education) state.data.education = sections.education;
     if (sections.skills) state.data.skills = sections.skills;
+    if (sections.projects) state.data.projects = sections.projects;
+    if (sections.certs) state.data.certs = sections.certs;
     // Fallback: put everything in experience if no sections found
     if (!sections.summary && !sections.experience && rest.trim()) {
       state.data.experience = rest.trim();
@@ -109,9 +114,11 @@
     const out = {};
     const headings = {
       summary: /^(个人简介|简介|summary|profile)/im,
-      experience: /^(工作经历|工作经验|experience|work)/im,
+      experience: /^(工作经历|工作经验|experience|work(?!\s*experience))/im,
+      projects: /^(项目经历|项目|projects)/im,
       education: /^(教育背景|教育|education)/im,
       skills: /^(专业技能|技能|skills)/im,
+      certs: /^(证书|认证|certifications?)/im,
     };
     const lines = text.split('\n');
     let current = null, buf = [];
@@ -145,10 +152,11 @@
     const map = {
       fName: 'name', fTitle: 'title', fContact: 'contact',
       fSummary: 'summary', fExperience: 'experience',
-      fEducation: 'education', fSkills: 'skills'
+      fEducation: 'education', fSkills: 'skills', fProjects: 'projects', fCerts: 'certs'
     };
     for (const [id, key] of Object.entries(map)) {
-      document.getElementById(id).value = state.data[key] || '';
+      const el = document.getElementById(id);
+      if (el) el.value = state.data[key] || '';
     }
     renderPreview();
     saveToStorage();
@@ -206,24 +214,53 @@
     if (d.education) {
       html += `<div class="resume-section"><h2>教育背景</h2><p style="font-size:14px;">${esc(d.education).replace(/\n/g, '<br>')}</p></div>`;
     }
+    if (d.projects) {
+      html += `<div class="resume-section"><h2>项目经历</h2>${renderExperience(d.projects)}</div>`;
+    }
     if (d.skills) {
       html += `<div class="resume-section"><h2>专业技能</h2><p style="font-size:14px;">${esc(d.skills)}</p></div>`;
+    }
+    if (d.certs) {
+      html += `<div class="resume-section"><h2>证书认证</h2><p style="font-size:14px;">${esc(d.certs).replace(/\n/g, '<br>')}</p></div>`;
     }
     el.innerHTML = html || '<p style="color:#999;">在左侧输入内容，实时预览简历效果</p>';
     saveToStorage();
   }
 
   function renderExperience(text) {
-    // Parse: blocks separated by blank lines; first line: Title | Company | Dates
+    // Flexible parser: handles both single-line "Title | Company | Dates"
+    // and multi-line headers (Title \n Dates \n Company | Location).
     const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
     return blocks.map(block => {
-      const lines = block.split('\n').filter(l => l.trim());
+      const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
       if (!lines.length) return '';
-      const header = lines[0].split('|').map(s => s.trim());
-      const bullets = lines.slice(1).map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+      let title = '', dates = '', company = '';
+      const bullets = [];
+      const dateRe = /(\d{4}\s*年|\d{4}[-/]\d{1,2}|至今|present)/i;
+      let i = 0;
+      // Case 1: first line has pipes -> "Title | Company | Dates"
+      if (lines[0].includes('|')) {
+        const parts = lines[0].split('|').map(s => s.trim());
+        title = parts[0] || ''; company = parts[1] || ''; dates = parts[2] || '';
+        i = 1;
+      } else {
+        // Case 2: multi-line header. Consume leading non-bullet lines.
+        while (i < lines.length && !/^[-•*]/.test(lines[i])) {
+          const ln = lines[i];
+          if (dateRe.test(ln) && !dates) dates = ln;
+          else if (!title) title = ln;
+          else if (!company) company = ln;
+          else break;
+          i++;
+        }
+      }
+      for (; i < lines.length; i++) {
+        const b = lines[i].replace(/^[-•*]\s*/, '').trim();
+        if (b) bullets.push(b);
+      }
       let html = '<div class="resume-item">';
-      html += `<div class="resume-item-header"><span>${esc(header[0] || '')}</span><span>${esc(header[2] || '')}</span></div>`;
-      if (header[1]) html += `<div class="resume-item-sub">${esc(header[1])}</div>`;
+      html += `<div class="resume-item-header"><span>${esc(title)}</span><span>${esc(dates)}</span></div>`;
+      if (company) html += `<div class="resume-item-sub">${esc(company)}</div>`;
       if (bullets.length) {
         html += '<ul class="resume-bullets">' + bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>';
       }
@@ -279,10 +316,9 @@
     const margin = 48;
     let y = height - margin;
 
-    const hasCjk = s => /[\u3400-\u9fff]/.test(s);
-    function fontFor(text, bold) {
-      if (hasCjk(text) && cjk) return bold ? cjkBold : cjk;
-      return bold ? helvBold : helv;
+    // WinAnsi-encodable -> standard font, else CJK font (same logic as pdf-engine.js fontRuns)
+    function isStdChar(ch) {
+      try { helv.encodeText(ch); return true; } catch (_) { return false; }
     }
     function drawText(text, x, yPos, size, bold, color) {
       // Split by font runs (same fix as pdf-engine.js)
@@ -296,13 +332,20 @@
     }
     function splitRuns(text, bold) {
       const runs = [];
-      let buf = '', bufCjk = null;
+      let buf = '', bufStd = true;
       for (const ch of text) {
-        const isC = hasCjk(ch) && cjk;
-        if (buf && isC !== bufCjk) { runs.push({ text: buf, font: bufCjk ? cjkBold : (bold ? helvBold : helv) }); buf = ''; }
-        buf += ch; bufCjk = isC;
+        const s = isStdChar(ch);
+        if (buf && s !== bufStd) { runs.push({ text: buf, font: bufStd ? (bold ? helvBold : helv) : (bold ? cjkBold : cjk) }); buf = ''; }
+        buf += ch; bufStd = s;
       }
-      if (buf) runs.push({ text: buf, font: bufCjk ? (bold ? cjkBold : cjk) : (bold ? helvBold : helv) });
+      if (buf) runs.push({ text: buf, font: bufStd ? (bold ? helvBold : helv) : (bold ? cjkBold : cjk) });
+      // Validate CJK coverage
+      for (const r of runs) {
+        if (r.font === cjk || r.font === cjkBold) {
+          // already validated via isStdChar fallback; ensure cjk exists
+          if (!cjk) throw new Error('CJK font not loaded but needed for: ' + r.text.slice(0, 20));
+        }
+      }
       return runs;
     }
     function textWidth(text, size, bold) {
@@ -405,8 +448,35 @@
         }
       });
     }
+    if (d.projects) {
+      section('项目经历', () => {
+        const blocks = d.projects.split(/\n\s*\n/).filter(b => b.trim());
+        for (const block of blocks) {
+          const lines = block.split('\n').filter(l => l.trim());
+          if (!lines.length) continue;
+          const header = lines[0].split('|').map(s => s.trim());
+          const tSize = 12;
+          drawText(header[0] || '', margin, y - tSize, tSize, true);
+          y -= tSize + 4;
+          if (header[1]) {
+            drawText(header[1], margin, y - 11, 11, false, rgb(0.33,0.33,0.33));
+            y -= 16;
+          }
+          for (const bullet of lines.slice(1)) {
+            const bt = bullet.replace(/^[-•*]\s*/, '');
+            const lines2 = wrapLine('• ' + bt, contentWidth - 12, 11, false);
+            for (const l of lines2) {
+              drawText(l, margin + 12, y - 11, 11, false);
+              y -= 16;
+            }
+          }
+          y -= 8;
+        }
+      });
+    }
     if (d.education) section('教育背景', () => paragraph(d.education, 11));
     if (d.skills) section('专业技能', () => paragraph(d.skills, 11));
+    if (d.certs) section('证书认证', () => paragraph(d.certs, 11));
 
     return await doc.save();
   }
@@ -426,7 +496,7 @@
     });
     document.getElementById('clearBtn').addEventListener('click', () => {
       if (!confirm('清空所有内容？')) return;
-      state.data = { name:'', title:'', contact:'', summary:'', experience:'', education:'', skills:'' };
+      state.data = { name:'', title:'', contact:'', summary:'', experience:'', projects:'', education:'', skills:'', certs:'' };
       state.photo = null;
       document.getElementById('photoPreview').innerHTML = '未上传';
       document.getElementById('photoRemove').style.display = 'none';
