@@ -13,4 +13,9 @@
   <url><loc>https://checkats.online/zh/guide/checkats-vs-jobscan/</loc><lastmod>2026-10-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://checkats.online/guide/free-jobscan-alternative/</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://checkats.online/zh/guide/free-jobscan-alternative/</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url>
+    <loc>https://checkats.online/docs/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
