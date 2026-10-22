@@ -14,6 +14,8 @@ const functions = html.slice(html.indexOf('      function normalizeExactText'), 
 assert(functions.length > 0 && functions.length < 25000);
 // Do not run the page or make requests. Load only its pure scoring functions.
 vm.runInContext(declarations + '\n' + functions.replace('      loadSkillsDict();', ''), context);
+// These helpers were moved before normalizeExactText in the deployed site.
+vm.runInContext(html.slice(html.indexOf('      var genericWords ='), html.indexOf('      function cjkChars')), context);
 const chinese = html.match(/      function isChineseText\(text\)\s*\{[\s\S]*?\n      \}/)[0];
 const cjk = html.match(/      function cjkChars\(text\)[^\n]*/)[0];
 vm.runInContext(cjk + '\n' + chinese, context);

@@ -11,3 +11,5 @@ state/
 report.md
 report.json
 __pycache__/
+output/playwright/
+tmp/pdfs/

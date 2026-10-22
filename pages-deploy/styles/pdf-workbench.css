@@ -1,0 +1,32 @@
+.pdf-workbench[hidden] { display: none !important; }
+.pdf-workbench { margin-top: 24px; padding: 28px; border: 1px solid #dcd8cc; border-radius: 20px; background: #fffdf8b3; }
+.pdf-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.pdf-header h3 { font-family: var(--font-display, Georgia, serif); font-size: 28px; margin: 0 0 10px; }
+.pdf-muted { font-size: 13px; line-height: 1.7; color: #696b62; margin: 10px 0; }
+.pdf-filename { font-size: 14px; overflow-wrap: anywhere; }
+.pdf-checks { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; font-size: 13px; }
+.pdf-checks > span { border: 1px solid #cfdbcf; border-radius: 8px; background: #edf3eb; padding: 8px 12px; }
+.pdf-warning { color: #8c3828; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.pdf-extracted, .pdf-paragraph-editor { margin: 16px 0; border-top: 1px solid #dcd8cc; padding-top: 14px; }
+.pdf-workbench summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.pdf-extracted pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; padding: 16px; font-size: 13px; background: #f5f2eb; }
+.pdf-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0; font-size: 14px; }
+.pdf-preview-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.pdf-preview-grid article { min-width: 0; }
+.pdf-preview-grid h4 { font-size: 14px; margin: 0 0 12px; }
+.pdf-paper { position: relative; width: 100%; overflow: hidden; background: #fff; border: 1px solid #dedbd3; box-shadow: 0 5px 18px #312e2510; }
+.pdf-paper canvas { display: block; width: 100%; height: auto; }
+.pdf-change { position: absolute; background: #56d98775; mix-blend-mode: multiply; pointer-events: none; border-radius: 1px; }
+.pdf-deletion { background: transparent; border: 1.5px solid #258d4b; }
+.pdf-placeholder { min-height: 200px; display: grid; place-items: center; text-align: center; padding: 30px; background: #f0ede47a; border: 1px dashed #ccc6b8; font-size: 14px; line-height: 1.8; color: #696b62; }
+.pdf-status { font-size: 14px; line-height: 1.7; margin: 18px 0; }
+.pdf-paragraph-editor label { display: block; margin: 18px 0 8px; font-size: 13px; font-weight: 600; }
+.pdf-paragraph-editor textarea { display: block; width: 100%; padding: 14px; min-height: 80px; border: 1px solid #cbc5b8; border-radius: 10px; background: #fffdf8; font: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
+.pdf-workbench button:disabled { opacity: .5; cursor: not-allowed; }
+.pdf-workbench :focus-visible { outline: 2px solid #b44d30; outline-offset: 4px; }
+@media (max-width: 700px) {
+  .pdf-workbench { padding: 18px; }
+  .pdf-header { flex-direction: column; gap: 10px; }
+  .pdf-preview-grid { grid-template-columns: minmax(0, 1fr); }
+  .pdf-paragraph-editor textarea { font-size: 16px; }
+}

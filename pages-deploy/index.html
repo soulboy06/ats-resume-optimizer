@@ -74,6 +74,7 @@
   </script>
   <link rel="stylesheet" href="/styles/components.css" />
   <link rel="stylesheet" href="/styles/design.css" />
+  <link rel="stylesheet" href="/styles/pdf-workbench.css" />
 </head>
 <body>
   <header class="nav-shell">
@@ -150,6 +151,7 @@
             </div>
             <p class="sample-language-note" id="sampleLanguageNote" hidden>支持中英文自动识别；可任选示例体验完整评分与优化流程。</p><p class="input-message" id="inputMessage" role="status" aria-live="polite"></p>
           </div>
+          <section id="pdfWorkbench" class="pdf-workbench" aria-label="PDF preview and export" hidden></section>
           <div class="result-panel" aria-live="polite">
             <div class="empty-state" id="emptyState">
               <div class="empty-inner">
@@ -237,7 +239,18 @@
     </section>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    window.pdfReady = import('/vendor/pdf.min.mjs').then(function(pdfjs) {
+      window.pdfjsLib = pdfjs;
+      pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdf.worker.min.mjs';
+    });
+    // Import failures are reported at upload, without an unhandled rejection.
+    window.pdfReady.catch(function() {});
+  </script>
+  <script src="/vendor/pdf-lib.min.js"></script>
+  <script src="/vendor/fontkit.umd.min.js"></script>
+  <script src="/scripts/pdf-engine.js"></script>
+  <script src="/scripts/pdf-workbench.js"></script>
   <script>
     /* diff-match-patch compatible word-diff subset. MIT License.
        API: diff_main(text1, text2), diff_cleanupSemantic(diffs). */
@@ -536,6 +549,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         updateCounts();
         if (lastMessage) setMessageKey(lastMessage.key, lastMessage.vars, lastMessage.isError);
         if (lastAnalysis) renderResults(lastAnalysis, lastResume, false);
+        window.resumePdf.setLanguage(currentLang);
       }
 
       document.querySelectorAll('.lang-option').forEach(function(btn){
@@ -650,7 +664,17 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         resumeCount.textContent = t('wordCount', {count:words(resumeEl.value).length});
         jobCount.textContent = t('wordCount', {count:words(jobEl.value).length});
       }
-      resumeEl.addEventListener('input', updateCounts);
+      resumeEl.addEventListener('input', function(){ updateCounts(); window.resumePdf.sourceChanged(resumeEl.value); });
+      document.addEventListener('checkats:pdf-edit', function(event){
+        resumeEl.value=event.detail.text; updateCounts();
+        var editor=document.getElementById('improveResume'); if(editor)editor.value=event.detail.text;
+        var count=document.getElementById('improveCount');if(count)count.textContent=t('wordCount',{count:words(event.detail.text).length});
+        if(latestAiOutput){
+          latestAiOutput=event.detail.text;
+          var aiText=document.getElementById('aiOutputText');if(aiText)aiText.textContent=latestAiOutput;
+          var diffPane=resultsEl.querySelector('.rewrite-diff');if(diffPane)diffPane.outerHTML=diffComparisonMarkup();
+        }
+      });
       jobEl.addEventListener('input', updateCounts);
 
       sampleBtn.addEventListener('click', function () {
@@ -1268,6 +1292,10 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         if(!status||!button)return;
         var source=currentResumeText();
         var job=jobEl.value.trim();
+        var pdfBlocks;
+        try { pdfBlocks=window.resumePdf.request(source); }
+        catch(e){ status.textContent=window.resumePdf.errorMessage(e); status.className='ai-status error'; return; }
+        var pdfRevision=window.resumePdf.getRevision();
         var beforeData=lastAnalysis||data;
         var beforeReview=latestHrReview?JSON.parse(JSON.stringify(latestHrReview)):null;
         button.disabled=true;
@@ -1286,7 +1314,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
             response=await workerFetch('/api/rewrite',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({lang:currentLang,resume:source,jd:job,missing:data.missing.slice(0,40).map(function(k){return k.term;})})
+              body:JSON.stringify({lang:currentLang,resume:source,jd:job,missing:data.missing.slice(0,40).map(function(k){return k.term;}),pdfBlocks:pdfBlocks||undefined})
             });
           }catch(fetchErr){
             showAiError(status,errorDetails,t('aiNetwork'),null,'',fetchErr&&fetchErr.message?fetchErr.name+': '+fetchErr.message:String(fetchErr));
@@ -1306,6 +1334,9 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           if(typeof payload.rewritten!=='string'||!payload.rewritten.trim()){
             showAiError(status,errorDetails,t('aiUnparseable'),response.status,rawBody,'');
             return;
+          }
+          if(currentResumeText()!==source||jobEl.value.trim()!==job||window.resumePdf.getRevision()!==pdfRevision){
+            status.textContent=window.resumePdf.errorMessage({code:'changedDocument'});status.className='ai-status error';return;
           }
           latestAiOutput=payload.rewritten.trim();
           latestAiModel=typeof payload.model==='string'?payload.model.trim():'';
@@ -1330,6 +1361,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           hrReviewError='';
           scanHistory.push({ats:rescored.atsScore});
           preserveScroll(function(){renderResults(rescored,latestAiOutput,false);});
+          if(pdfBlocks) await window.resumePdf.accept(payload.pdfBlocks,source,latestAiOutput,pdfRevision);
           setMessageKey('analysisComplete',{ats:rescored.atsScore},false);
           await runHrReview(rescored,{afterRewrite:true,beforeReview:beforeReview});
         }finally{
@@ -1344,7 +1376,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         var improveBtn=document.getElementById('improveBtn');var improveEditor=document.getElementById('improveEditor');var editor=document.getElementById('improveResume');var improveCount=document.getElementById('improveCount');
         if(improveBtn)improveBtn.addEventListener('click',function(){improveEditor.classList.add('active');editor.focus();});
         var collapseEditorBtn=document.getElementById('collapseEditorBtn');if(collapseEditorBtn)collapseEditorBtn.addEventListener('click',function(){improveEditor.classList.remove('active');improveBtn.focus();});
-        if(editor)editor.addEventListener('input',function(){improveCount.textContent=t('wordCount',{count:words(editor.value).length});});
+        if(editor)editor.addEventListener('input',function(){improveCount.textContent=t('wordCount',{count:words(editor.value).length});window.resumePdf.sourceChanged(editor.value);});
         var reanalyzeBtn=document.getElementById('reanalyzeBtn');if(reanalyzeBtn)reanalyzeBtn.addEventListener('click',function(){var edited=editor.value.trim();var job=jobEl.value.trim();if(words(edited).length<50||words(job).length<30){setMessageKey('minimumText',{},true);return;}var beforeData=lastAnalysis;resumeEl.value=edited;updateCounts();reanalyzeBtn.disabled=true;resultsEl.classList.remove('active');scanState.classList.add('active');setTimeout(function(){var next=scoreResume(edited,job);comparison={beforeMatched:beforeData.matched.length,beforeKeywords:beforeData.keywords.length,afterMatched:next.matched.length,afterKeywords:next.keywords.length};lastAnalysis=next;lastResume=edited;lastJob=job;latestHrReview=null;hrReviewLoading=false;hrReviewError='';scanHistory.push({ats:next.atsScore});scanState.classList.remove('active');renderResults(next,edited,true);setMessageKey('analysisComplete',{ats:next.atsScore},false);},700);});
         var downloadBtn=document.getElementById('downloadBtn');if(downloadBtn)downloadBtn.addEventListener('click',downloadLatest);
         var aiDownloadBtn=document.getElementById('aiDownloadBtn');if(aiDownloadBtn)aiDownloadBtn.addEventListener('click',downloadLatest);
@@ -1366,14 +1398,17 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       pdfInput.addEventListener('change',async function(){
         var file=pdfInput.files&&pdfInput.files[0];if(!file)return;
         if(file.type&&file.type!=='application/pdf'){setMessageKey('choosePdf',{},true);return;}
-        if(!window.pdfjsLib){setMessageKey('pdfUnavailable',{},true);return;}
         uploadWrap.classList.add('loading');uploadWrap.innerHTML='<span class="ai-spinner" aria-hidden="true"></span><span class="button-label">'+esc(t('readingPdf'))+'</span>';setMessageKey('extractingPdf',{name:file.name},false);
+        analyzeBtn.disabled=true;
         try{
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          var buffer=await file.arrayBuffer();var pdf=await window.pdfjsLib.getDocument({data:buffer}).promise;var pages=[];
-          for(var p=1;p<=pdf.numPages;p++){var page=await pdf.getPage(p);var content=await page.getTextContent();pages.push(content.items.map(function(item){return item.str;}).join(' '));}
-          var extracted=pages.join('\n\n').trim();if(words(extracted).length<20)throw new Error('No readable text');resumeEl.value=extracted;updateCounts();setMessageKey('pdfExtracted',{pages:pdf.numPages,pageWord:pdf.numPages>1?t('pages'):t('page')},false);
-        }catch(err){setMessageKey('pdfFailed',{},true);}finally{uploadWrap.classList.remove('loading');uploadWrap.innerHTML=icon('upload')+'<span class="button-label">'+esc(t('uploadButton'))+'</span>';pdfInput.value='';}
+          // Discard old analysis and export state as soon as a new file is chosen.
+          lastAnalysis=null;lastResume='';lastJob='';latestAiOutput='';latestAiOriginal='';latestAiModel='';latestHrReview=null;aiComparison=null;comparison=null;aiReviewComparison=null;
+          resultsEl.innerHTML='';resultsEl.classList.remove('active');emptyState.style.display='';resumeEl.value='';updateCounts();
+          var imported=await window.resumePdf.importFile(file);
+          resumeEl.value=imported.text;updateCounts();
+          setMessageKey(imported.stats.emptyPages?'pdfFailed':'pdfExtracted',{pages:imported.stats.pages,pageWord:imported.stats.pages>1?t('pages'):t('page')},!!imported.stats.emptyPages);
+        }catch(err){inputMessage.textContent=window.resumePdf.errorMessage(err);inputMessage.className='input-message error';}
+        finally{analyzeBtn.disabled=false;uploadWrap.classList.remove('loading');uploadWrap.innerHTML=icon('upload')+'<span class="button-label">'+esc(t('uploadButton'))+'</span>';pdfInput.value='';}
       });
 
       applyLanguage('en');

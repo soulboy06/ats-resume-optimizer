@@ -66,7 +66,7 @@ for url in locations:
     assert url.startswith(host + '/'), url
     path = urlparse(url).path
     file = resolve(path)
-    text = file.read_text()
+    text = file.read_text(encoding='utf-8')
     assert 'ScoreMyResume' not in text and 'ATS Resume Optimizer' not in text, file
     page = Page(text)
     assert len([x for x in page.tags if x[0] == 'h1']) == 1, file
@@ -80,7 +80,7 @@ for url in locations:
     for data in page.scripts:
         if data.get('@type') == 'FAQPage':
             faq = [(x['name'], x['acceptedAnswer']['text']) for x in data['mainEntity']]
-            assert faq == page.faqs, 'FAQ schema does not match visible answers'
+            assert faq == page.faqs, str(file) + ': FAQ schema does not match visible answers'
     links[path] = []
     for tag, a in page.tags:
         href = a.get('href') if tag in ('a', 'link') else a.get('src') if tag in ('script', 'img') else a.get('content') if tag == 'meta' and a.get('property') == 'og:image' else None
