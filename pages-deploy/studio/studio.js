@@ -271,6 +271,10 @@
 
   // ---------- PDF Export ----------
   async function exportPdf() {
+    // 直接用浏览器打印：所见即所得，文字可选，ATS 可解析
+    // 比手写 pdf-lib 绘制更可靠（无字体嵌入/字距问题）
+    window.print();
+    return;
     const status = document.getElementById('exportStatus');
     const btn = document.getElementById('exportPdfBtn');
     btn.disabled = true;
@@ -307,7 +311,7 @@
     try {
       const fontBytes = await fetch('/vendor/fonts/NotoSansSC.ttf').then(r => r.arrayBuffer());
       doc.registerFontkit(fontkit);
-      cjk = await doc.embedFont(fontBytes, { subset: true });
+      cjk = await doc.embedFont(fontBytes, { subset: false });
       cjkBold = cjk; // NotoSansSC has no bold; use same
     } catch (e) { console.warn('CJK font not available', e); }
 
@@ -489,6 +493,8 @@
     loadFromStorage();
     renderPreview();
     document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
     document.getElementById('loadAiBtn').addEventListener('click', () => {
       const t = localStorage.getItem('checkats_ai_rewrite');
       if (t) { parseAiRewrite(t); localStorage.removeItem('checkats_ai_rewrite'); }
