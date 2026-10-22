@@ -4,7 +4,14 @@
 写完一篇把 [ ] 改为 [x] 并标注日期。
 
 - [x] ATS Resume Checklist for Software Engineers (2026) | ats resume checklist software engineers | ats-resume-checklist-software-engineers (2026-10-11)
-- [ ] ATS-Friendly Resume Template for Software Engineers (2026) | ats friendly resume template software engineer | ats-resume-template-software-engineers
+- [x] ATS-Friendly Resume Template for Software Engineers (2026) | ats friendly resume template software engineer | ats-resume-template-software-engineers (2026-10-14)
+
+> 对比选题（下面 4 个）写稿前先读 competitor-facts-2026-10-14.md（竞品价格/免费档事实卡，2026-10-14 采集、带来源日期）；写稿当天去三家官网 pricing 页复核一遍数字。铁律：对手哪里比你强要承认，每个关于对手的说法给来源+日期。
+
+- [x] CheckATS vs Jobscan: Free ATS Checker Comparison (2026) | checkats vs jobscan | checkats-vs-jobscan (2026-10-17)
+- [x] Free Jobscan Alternative: ATS Resume Check With No Signup | free jobscan alternative | free-jobscan-alternative (2026-10-20)
+- [ ] CheckATS vs Resume Worded: Which Free ATS Check Shows Its Work | checkats vs resume worded | checkats-vs-resume-worded
+- [ ] CheckATS vs Teal: No-Signup ATS Check vs All-in-One Tracker | checkats vs teal | checkats-vs-teal
 - [ ] ATS Resume Keywords for Backend Developers | ats resume keywords backend developer | ats-resume-keywords-backend-developers
 - [ ] ATS Resume Keywords for Frontend Developers | ats resume keywords frontend developer | ats-resume-keywords-frontend-developers
 - [ ] How to Beat ATS as a Junior Developer (2026) | how to beat ats junior developer | beat-ats-junior-developer
