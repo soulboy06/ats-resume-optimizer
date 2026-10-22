@@ -277,17 +277,17 @@
     return out;
   }
 
-  function wrapTokens(tokens, font, size, width) {
+  function wrapTokens(tokens, size, width) {
     const lines = [[]]; let x = 0;
     for (const token of tokens) {
       if (token.text === '\n') { lines.push([]); x = 0; continue; }
-      let w = font.widthOfTextAtSize(token.text, size);
+      let w = token.font.widthOfTextAtSize(token.text, size);
       if (w > width) {
         for (const char of token.text) {
-          const cw = font.widthOfTextAtSize(char, size);
+          const cw = token.font.widthOfTextAtSize(char, size);
           if (cw > width) throw new PdfError('overflow');
           if (x + cw > width && lines[lines.length - 1].length) { lines.push([]); x = 0; }
-          lines[lines.length - 1].push({ text: char, changed: token.changed, x, width: cw }); x += cw;
+          lines[lines.length - 1].push({ text: char, changed: token.changed, font: token.font, x, width: cw }); x += cw;
         }
         continue;
       }
@@ -308,45 +308,83 @@
     const pages = await doc.copyPages(original, original.getPageIndices());
     pages.forEach(page => { doc.addPage(page); sanitizePageText(page, lib); });
     const fonts = new Map(); let unicodeFont;
-    async function getFont(style, text) {
+    function standardName(style) {
       const variants = style.family === 'serif' ? ['TimesRoman', 'TimesRomanBold', 'TimesRomanItalic', 'TimesRomanBoldItalic'] : style.family === 'mono' ? ['Courier', 'CourierBold', 'CourierOblique', 'CourierBoldOblique'] : ['Helvetica', 'HelveticaBold', 'HelveticaOblique', 'HelveticaBoldOblique'];
-      const name = variants[(style.bold ? 1 : 0) + (style.italic ? 2 : 0)];
+      return variants[(style.bold ? 1 : 0) + (style.italic ? 2 : 0)];
+    }
+    async function getStandard(style) {
+      const name = standardName(style);
       if (!fonts.has(name)) fonts.set(name, await doc.embedFont(StandardFonts[name]));
-      const standard = fonts.get(name);
-      try { standard.encodeText(text); return standard; } catch (_) {
-        if (!unicodeFont) {
-          if (!deps.fontkit || !deps.unicodeFont) throw new PdfError('font');
-          doc.registerFontkit(deps.fontkit);
-          const bytes = await deps.unicodeFont();
-          const parsed = deps.fontkit.create(bytes), codepoints = new Set(parsed.characterSet);
-          // fontkit's CJK subsetting can preserve ToUnicode while losing visible
-          // glyph outlines. Embed the static font intact; parsing alone is not
-          // enough to establish that a Chinese export is readable.
-          unicodeFont = { font: await doc.embedFont(bytes, { subset: false }), codepoints };
-        }
-        if ([...text].some(c => !/\s/.test(c) && !unicodeFont.codepoints.has(c.codePointAt(0)))) throw new PdfError('font');
-        return unicodeFont.font;
+      return fonts.get(name);
+    }
+    async function getUnicode() {
+      if (!unicodeFont) {
+        if (!deps.fontkit || !deps.unicodeFont) throw new PdfError('font');
+        doc.registerFontkit(deps.fontkit);
+        const bytes = await deps.unicodeFont();
+        const parsed = deps.fontkit.create(bytes), codepoints = new Set(parsed.characterSet);
+        // fontkit's CJK subsetting can preserve ToUnicode while losing visible
+        // glyph outlines. Embed the static font intact; parsing alone is not
+        // enough to establish that a Chinese export is readable.
+        unicodeFont = { font: await doc.embedFont(bytes, { subset: false }), codepoints };
       }
+      return unicodeFont;
+    }
+    // Split text into font runs: WinAnsi-encodable runs use the standard font,
+    // everything else uses the CJK font. This works around a pdf-lib/fontkit
+    // issue where layout() substitutes digit glyphs following Latin letters in
+    // this NotoSansSC file, emitting glyph IDs missing from the ToUnicode CMap
+    // (digits came back as unrelated CJK characters, failing the round-trip).
+    const stdCache = new Map();
+    function isStdChar(standard, ch) {
+      if (!stdCache.has(ch)) {
+        try { standard.encodeText(ch); stdCache.set(ch, true); } catch (_) { stdCache.set(ch, false); }
+      }
+      return stdCache.get(ch);
+    }
+    async function fontRuns(style, text) {
+      const standard = await getStandard(style);
+      const runs = [];
+      let buf = '', bufStd = true;
+      for (const ch of text) {
+        const s = isStdChar(standard, ch);
+        if (buf && s !== bufStd) { runs.push({ text: buf, std: bufStd }); buf = ''; }
+        buf += ch; bufStd = s;
+      }
+      if (buf) runs.push({ text: buf, std: bufStd });
+      let uni = null;
+      if (runs.some(r => !r.std)) uni = await getUnicode();
+      return runs.map(r => {
+        if (r.std) return { text: r.text, font: standard };
+        if ([...r.text].some(c => !/\s/.test(c) && !uni.codepoints.has(c.codePointAt(0)))) throw new PdfError('font');
+        return { text: r.text, font: uni.font };
+      });
     }
     const highlights = [], fitted = [];
     for (const block of model.blocks) {
       const page = pages[block.page], text = map.get(block.id), changed = text !== block.text;
       if (!changed) {
         for (const line of block.lines) for (const item of line.items) {
-          const font = await getFont(item.font, item.text);
-          const natural = font.widthOfTextAtSize(item.text, item.size);
+          const runs = await fontRuns(item.font, item.text);
+          const natural = runs.reduce((s, r) => s + r.font.widthOfTextAtSize(r.text, item.size), 0);
           const scale = natural ? item.width / natural : 1;
           if (!Number.isFinite(scale) || scale < .2 || scale > 5) throw new PdfError('font');
           page.pushOperators(pushGraphicsState(), concatTransformationMatrix(scale, 0, 0, 1, item.x, item.y));
-          page.drawText(item.text, { x: 0, y: 0, size: item.size, font, color: rgb(...item.color) });
+          let x = 0;
+          for (const r of runs) {
+            page.drawText(r.text, { x, y: 0, size: item.size, font: r.font, color: rgb(...item.color) });
+            x += r.font.widthOfTextAtSize(r.text, item.size);
+          }
           page.pushOperators(popGraphicsState());
         }
         continue;
       }
-      const font = await getFont(block.font, text), tokens = segments(block.text, text);
+      const tokens = [];
+      for (const seg of segments(block.text, text))
+        for (const r of await fontRuns(block.font, seg.text)) tokens.push({ ...seg, text: r.text, font: r.font });
       let size = block.size, lines;
       while (size >= block.size * .9 - .01) {
-        lines = wrapTokens(tokens, font, size, block.width);
+        lines = wrapTokens(tokens, size, block.width);
         if (lines.length <= block.maxLines) break;
         size -= .25;
       }
@@ -355,7 +393,7 @@
       lines.forEach((line, n) => {
         const baseline = block.y - n * block.leading;
         for (const run of line) {
-          page.drawText(run.text, { x: block.x + run.x, y: baseline, font, size, color: rgb(...block.color) });
+          page.drawText(run.text, { x: block.x + run.x, y: baseline, font: run.font, size, color: rgb(...block.color) });
           if (run.changed && run.text.trim()) highlights.push({ page: block.page, x: block.x + run.x, y: baseline - size * .2, width: run.width, height: size * 1.2 });
         }
       });

@@ -140,3 +140,27 @@ test('text in shared Form XObjects is removed before drawing native replacement 
     assert(result.highlights.length > 0);
   } finally { await model.pdf.destroy(); }
 });
+
+test('mixed ASCII/CJK text round-trips without digit glyph corruption', async () => {
+  // Regression test: pdf-lib/fontkit's layout() substitutes digit glyphs that
+  // follow Latin letters in this NotoSansSC file, emitting glyph IDs absent
+  // from the ToUnicode CMap. Digits came back as unrelated CJK characters
+  // (e.g. "S3" -> "S睢"), failing the round-trip check on real-world PDFs.
+  const deps = await dependencies(), doc = await lib.PDFDocument.create();
+  const p = doc.addPage([595, 842]);
+  p.drawText('placeholder', { x: 48, y: 700, size: 11 });
+  const model = await engine.inspect(await doc.save(), deps.pdfjs, lib);
+  try {
+    assert.deepEqual(model.unsupported, []);
+    // Simulate a real-world (Word-exported) extraction: one item mixing
+    // Latin letters, digits and CJK, as pdf.js returns for such PDFs.
+    const block = model.blocks[0], item = block.lines[0].items[0];
+    item.text = 'AWS（ECS、S3、CloudWatch）p95测试18000';
+    block.text = item.text;
+    const output = await engine.createNative(model, model.blocks.map(b => ({ id: b.id, text: b.text })), deps);
+    assert(output.text.includes('S3'));
+    assert(output.text.includes('p95'));
+    assert(output.text.includes('18000'));
+    assert(!output.text.includes('睢'));
+  } finally { await model.pdf.destroy(); }
+});
