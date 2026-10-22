@@ -81,12 +81,14 @@
   ]
 }
   </script>
-<link rel="stylesheet" href="/styles/guide.css" />
   <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
-</head>
-<body>
-  <nav class="top"><a href="/?lang=zh">← CheckATS</a> · <a href="/guide/ats-resume-template-software-engineers/">English</a></nav>
-  <main class="wrap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;600&amp;family=Noto+Serif+SC:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/components.css"><link rel="stylesheet" href="/styles/design.css"><link rel="stylesheet" href="/styles/guide.css"><script src="/scripts/guides.js" defer></script>
+</head><body class="docs-page"><a class="skip-link" href="#docs-main">跳到正文</a>
+<header class="nav-shell"><nav class="nav product-nav" aria-label="主导航">
+<a class="brand" href="/?lang=zh"><span class="brand-mark"><img class="brand-symbol" src="/brand-mark.svg" width="25" height="25" alt=""></span><span>CheckATS</span></a>
+<div class="nav-links product-nav-links"><a href="/?lang=zh">简历分析</a><a href="/studio/?lang=zh">PDF 工作台</a><a href="/zh/guide/" aria-current="page">使用指南</a></div>
+<div class="language-toggle" aria-label="语言"><a class="lang-option" href="/guide/ats-resume-template-software-engineers/" lang="en" hreflang="en">EN</a><a class="lang-option active" href="/zh/guide/ats-resume-template-software-engineers/" lang="zh-CN" hreflang="zh-CN" aria-current="true">中文</a></div></nav></header><div class="docs-layout docs-layout-article"><aside class="docs-sidebar"><details class="docs-menu"><summary>文档目录<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></summary><nav aria-label="文档目录"><h2>使用指南</h2><a class="docs-overview" href="/zh/guide/"><span aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14m0-14C9 4 5 4 2 5v15c3-1 7-1 10 1 3-2 7-2 10-1V5c-3-1-7-1-10 2Z"></path></svg></span>指南总览</a><div class="docs-nav-group"><p>简历写法</p><a href="/zh/guide/ats-resume-checklist-software-engineers/">ATS 检查清单</a><a href="/zh/guide/ats-resume-template-software-engineers/" aria-current="page">ATS 友好简历模板</a></div><div class="docs-nav-group"><p>工具对比</p><a href="/zh/guide/checkats-vs-jobscan/">CheckATS 与 Jobscan</a><a href="/zh/guide/free-jobscan-alternative/">免费 Jobscan 替代方案</a></div><div class="docs-nav-group"><p>了解 CheckATS</p><a href="/zh/methodology/">计分方法与数据说明</a></div><div class="docs-side-cta"><p>准备好检查简历了？</p><a href="/?lang=zh#analyzer">前往简历分析 ↗</a></div></nav></details></aside><main id="docs-main" class="docs-main"><p class="docs-breadcrumb"><a href="/zh/guide/">使用指南</a> / 简历写法</p><details class="docs-mobile-toc"><summary>本页内容<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></summary><nav aria-label="本页内容"><a href="#section-1">ATS 友好的简历模板长什么样？</a><a href="#section-2">模板里每个板块怎么填？</a><a href="#section-3">哪些设计会坑了解析？</a><a href="#section-4">怎么验证模板真的好用？</a><a href="#section-5">常见问题</a><a href="#section-6">来源与这份模板的验证边界</a><a href="#section-7">继续阅读</a></nav></details><article class="docs-article"><!-- docs-content:start -->
     <h1>软件工程师 ATS 友好简历模板（2026）</h1>
     <p class="meta">CheckATS · 更新于 2026 年 10 月 14 日</p>
     <p class="lede">想过 ATS 这一关，不需要请设计师——你需要的是一份故意做得很无聊的模板。这篇指南给软件工程师一份 2026 年可用的 ATS 友好简历模板：板块怎么放、顺序怎么排，以及怎么验证招聘方系统解析出的文本和你提交的文件一致。没有模板能保证拿到面试，但干净的模板至少不会让排版成为被筛掉的理由。</p>
@@ -95,7 +97,7 @@
       <p style="margin:0;font-size:15px;color:#14532d;"><strong style="color:#14532d;">一句话总结：</strong>ATS 友好的软件工程师简历模板就是单栏纯文本排版、标准板块标题（个人简介 / 技能 / 工作经历 / 教育背景）、顶部独立 Skills 板块按 JD 原词写技术名词，最后提交文字可选的 PDF。别用图形、表格和分栏，投递前自己检查一遍解析后的文本。</p>
     </div>
 
-    <h2>ATS 友好的简历模板长什么样？</h2>
+    <h2 id="section-1">ATS 友好的简历模板长什么样？</h2>
     <p><strong>答案：</strong>长得很无聊——单栏纯文本，顶部是姓名和联系方式，往下依次是个人简介、技能、工作经历、教育背景，标题都用标准写法。没有表格、图形、分栏和花哨字体。任何解析器读起来都一样：从上到下，一行一行，不用猜。</p>
     <p>下面是模板全文（投海外岗用英文写，重点看的是结构）。直接复制到任何文本编辑器里就能用——这份模板的要点恰恰在于，里面没有任何需要解析器去"猜"的东西：</p>
     <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;overflow-x:auto;font-size:14px;line-height:1.7;">YOUR NAME
@@ -127,7 +129,7 @@ EDUCATION
 B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p>注意里面没有什么：没有侧边栏、没有技能条、没有照片、没有图标、没有页眉页脚的小花招。每一个这种设计都在让解析器猜——先读左栏还是右栏、那个条形图算什么意思、页脚是属于第一页还是第二页。这份模板还顺手解决另一个问题：关键词稀释。技术名词原样列在顶部 Skills 区，关键词扫描一眼就能找到，不用在段落里大海捞针。"有团队精神""吃苦耐劳"这类通用软技能词别往里写——CheckATS 在算关键词时故意把它们排除在外，因为谁都匹配得上，等于什么都没说。</p>
 
-    <h2>模板里每个板块怎么填？</h2>
+    <h2 id="section-2">模板里每个板块怎么填？</h2>
     <p><strong>答案：</strong>联系方式各占一行纯文本；个人简介 2–3 行，写清年限、技术栈和一个量化成果；Skills 板块按招聘启事的原词写技术名词；经历每条按"动词 + 做了什么 + 量化结果"写；日期全文统一一种年月格式。宁可少写，不写不会的东西。</p>
     <p><strong>联系方式。</strong>邮箱电话各占一行、纯文本，别塞进页眉、图形或图标里——有些解析器把页眉单独处理，联系方式丢了是最常见的解析翻车。城市、LinkedIn、GitHub 链接都写上，放在解析器一定能读到的地方。</p>
     <p><strong>个人简介。</strong>2–3 行，只干一件事：说清几年经验、核心技术栈、一个量化成果。"4 年 Go/Python 后端经验；做过月流水 200 万美元的计费系统；前 Stripe。"写不满三行就写两行，注水的简介比短的更减分。</p>
@@ -136,7 +138,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p><strong>项目（可选）。</strong>有开源或 side project 的话，一行写技术栈、一行写成果，附上仓库链接。项目里的技术词同样参与原词匹配。</p>
     <p><strong>教育背景。</strong>学位、学校、日期。放最后；应届生可以挪到经历前面。</p>
 
-    <h2>哪些设计会坑了解析？</h2>
+    <h2 id="section-3">哪些设计会坑了解析？</h2>
     <p><strong>答案：</strong>分栏排版、拿表格做结构、图形和图标里的文字、塞在页眉页脚的联系方式、生僻字体、扫描件 PDF。这些不一定每个解析器都挂，但都会打乱阅读顺序或让抽取器漏掉文字，稳妥起见全避开。</p>
     <p><strong>双栏。</strong>最常见的坑。有的解析器先读左栏再读右栏，有的横着一行行读，把不相干的句子拼在一起。你控制不了雇主用的是哪种，就别让它猜。</p>
     <p><strong>表格。</strong>纯粹为了对齐好看用的表格（左边名字、右边日期），解析出来经常是乱序。想对齐就用制表位或空格——看起来对齐、底下是纯文本就行。</p>
@@ -144,7 +146,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p><strong>页眉页脚。</strong>有的解析器把页眉页脚当元数据直接 strip 掉，有的每页重复一遍。联系方式放这里，要么消失要么重复——写在正文里。</p>
     <p><strong>扫描件 PDF。</strong>选中复制不出文字，解析器同样读不出来。CheckATS 评估的是抽取后的文本，能导入文本型 PDF 和粘贴文本，不给扫描件做 OCR——扫描版简历在它这里就是读不懂，跟模板底子多好没关系。</p>
 
-    <h2>怎么验证模板真的好用？</h2>
+    <h2 id="section-4">怎么验证模板真的好用？</h2>
     <p><strong>答案：</strong>先做复制粘贴测试——PDF 里全选复制，粘进纯文本文件，看有没有丢内容、顺序对不对。再拿一份真实 JD 跑一遍 ATS 检测：CheckATS 的打分是 JD 原词覆盖 60% 加纯文本可解析性（联系方式、日期规范、无乱码、篇幅合理）40%。标红的地方改完再投。</p>
     <p>复制粘贴测试 10 秒钟，能抓住大部分排版翻车：联系方式丢了、分栏顺序乱了、生僻字体出乱码。粘出来的文本读着像一份正常文档，模板结构就没问题。</p>
     <p>ATS 检测测的是另一半：对不对口。把简历和真实 JD 粘进检测工具，看必须项关键词缺了哪些。关键词分低多半是措辞问题——JD 写 Kubernetes 你只写了 K8s——不是模板的问题。CheckATS 就是按你写的原文一个字一个字算的，故意这样设计。</p>
@@ -155,7 +157,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
       <a href="/?lang=zh">运行免费 ATS 检测 →</a>
     </div>
 
-    <h2>常见问题</h2>
+    <h2 id="section-5">常见问题</h2>
     <div class="faq">
       <h3>PDF 和 DOCX 哪个对 ATS 更安全？</h3>
       <p>先看雇主要求。有得选的话，文字可选的 PDF 是稳妥的默认选择。CheckATS 能导入文本型 PDF 和粘贴文本，不收 DOCX，也不给扫描件做 OCR。</p>
@@ -166,33 +168,12 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
       <h3>简历一页还是两页？</h3>
       <p>初级工程师一页是惯例；八到十年以上相关经验两页没问题。解析器不关心页数，只关心抽出的文本干不干净。保持在一分钟能扫完的长度。</p>
     </div>
-    <h2>来源与这份模板的验证边界</h2>
+    <h2 id="section-6">来源与这份模板的验证边界</h2>
     <p><a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ">Greenhouse Talent Matching FAQ</a> 描述了该功能的近义词匹配和人工决策，它不是所有 ATS 的文档。上文涉及产品特性的表述遵循 <a href="/zh/methodology/">CheckATS 计分方法</a>。</p>
-        <h2>继续阅读</h2>
+        <h2 id="section-7">继续阅读</h2>
     <div class="answer-box">
       <p style="margin:0 0 10px;"><strong><a href="/zh/guide/ats-resume-checklist-software-engineers/">软件工程师 ATS 简历检查清单（2026）</a></strong><br>动手排版之前，先过一遍关键词、可读文本和经历表达这十项检查。</p>
       <p style="margin:0;"><strong><a href="/zh/methodology/">CheckATS 简历打分方法</a></strong><br>分数背后的完整公式：60% JD 关键词覆盖率 + 40% 文本检查，不玩黑盒。</p>
     </div>
 <p><a href="/zh/guide/">全部中文指南</a> · <a href="/guide/">English guides</a> · <a href="/zh/methodology/">计分与数据说明</a></p>
-  </main>
-  <footer>
-    © 2026 <a href="/?lang=zh">CheckATS</a> · 免费 ATS 简历检测与 AI 优化。
-  </footer>
-<script>
-(function(){
-  var m = location.search.match(/[?&]pass=([^&]+)/);
-  if (!m) return;
-  var pass = m[1];
-  document.querySelectorAll('a[href]').forEach(function(a){
-    var href = a.getAttribute('href');
-    // 只处理站内链接
-    if (!href || href.charAt(0) !== '/') return;
-    if (href.indexOf('pass=') !== -1) return;
-    // 跳过锚点
-    if (href.charAt(0) === '#') return;
-    a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
-  });
-})();
-</script>
-</body>
-</html>
+  <!-- docs-content:end --></article><div class="docs-article-footer"><a href="/zh/guide/">← 所有使用指南</a><a href="/zh/guide/ats-resume-checklist-software-engineers/">继续阅读 →</a></div></main><aside class="docs-toc"><h2>本页内容</h2><nav aria-label="本页内容"><a href="#section-1">ATS 友好的简历模板长什么样？</a><a href="#section-2">模板里每个板块怎么填？</a><a href="#section-3">哪些设计会坑了解析？</a><a href="#section-4">怎么验证模板真的好用？</a><a href="#section-5">常见问题</a><a href="#section-6">来源与这份模板的验证边界</a><a href="#section-7">继续阅读</a></nav><a class="docs-toc-cta" href="/?lang=zh#analyzer">检查我的简历 ↗</a></aside></div><footer class="docs-footer"><span>CheckATS · 简历指南</span><a href="/?lang=zh">回到简历分析 ↗</a></footer></body></html>
