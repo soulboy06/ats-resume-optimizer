@@ -63,6 +63,8 @@
 .preview-footnote { text-align:center; margin:20px 0 0; font-size:11px; }
 .studio-preview.is-stale canvas { opacity:.55; }
 .studio-shell [hidden] { display:none!important; }
+.studio-status:empty,.studio-small:empty { display:none; }
+.studio-credits { padding:22px 0 0; margin:0; border:0; background:none; text-align:right; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 @media(max-width:1100px) {
   .studio-shell { width:calc(100% - 64px); }

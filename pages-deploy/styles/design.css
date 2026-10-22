@@ -192,6 +192,7 @@ input:focus-visible, select:focus-visible {
 .input-kind { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); }
 .counter { color: var(--muted); font-size: 11px; font-weight: 400; }
 .field-foot { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 16px; }
+.input-panel .field-foot { justify-content:flex-end; }
 .input-panel textarea { min-height: 245px; padding: 0 8px 0 0; border: 0; border-radius: 0; background: none; font-size: 14px; line-height: 1.75; flex: 1; box-shadow: none; }
 .input-panel textarea:focus { box-shadow: none; border: 0; outline: none; }
 textarea { scrollbar-width: thin; scrollbar-color: #c4bba966 transparent; }

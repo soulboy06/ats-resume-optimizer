@@ -19,34 +19,35 @@
     <div class="language-toggle" role="group" aria-label="Language"><button class="lang-option" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div>
   </nav></header>
   <main class="studio-shell">
-    <section class="studio-intro"><p class="hero-kicker">THE FINISHING TOUCH</p><h1><span data-i18n="titleFirst">Your story.</span> <span class="studio-title-accent" data-i18n="titleLast">Ready to send.</span></h1><p class="hero-copy" data-i18n="intro">Choose a layout, make it yours, and leave with a readable PDF.</p><p class="hero-local" data-i18n="privacy">Content and photos stay in this browser. No account needed.</p><div class="hero-capabilities studio-steps"><a href="#templatePanel"><span class="capability-num">01</span><span data-i18n="shortTemplate">Choose a layout</span></a><a href="#detailsPanel"><span class="capability-num">02</span><span data-i18n="shortDetails">Make it yours</span></a><a href="#studioPreview"><span class="capability-num">03</span><span data-i18n="shortExport">Export your PDF</span></a></div></section>
-    <p id="handoffStatus" class="studio-notice" role="status" aria-live="polite"></p>
+    <section class="studio-intro"><h1><span data-i18n="titleFirst">Your story.</span> <span class="studio-title-accent" data-i18n="titleLast">Ready to send.</span></h1><p class="hero-local" data-i18n="privacy">Content and photos stay in this browser. No account needed.</p></section>
+    <p id="handoffStatus" class="studio-notice sr-only" role="status" aria-live="polite"></p>
     <div class="studio-layout">
       <aside class="studio-sidebar" aria-label="Resume editor">
-        <section id="templatePanel" class="studio-card glass"><p class="eyebrow" data-i18n="stepOne">01 / CHOOSE A LOOK</p><h2 data-i18n="templates">A layout that fits you.</h2><div class="template-grid" id="templateGrid"></div><p class="studio-small" id="templateCredit"></p><a class="studio-small" href="/studio/credits.html" target="_blank" rel="noopener" data-i18n="credits">Template sources & licenses ↗</a>
+        <section id="templatePanel" class="studio-card glass"><h2 data-i18n="templates">A layout that fits you.</h2><div class="template-grid" id="templateGrid"></div><p class="studio-small" id="templateCredit" hidden></p>
           <div class="settings-row"><label><span data-i18n="paper">Paper</span><select id="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label><label><span data-i18n="fontSize">Text size</span><select id="fontSize"><option value="9.5">9.5 pt</option><option value="10.5" selected>10.5 pt</option><option value="11.5">11.5 pt</option></select></label><label><span data-i18n="headingLanguage">PDF headings</span><select id="contentLanguage"><option value="en">English</option><option value="zh">中文</option></select></label></div>
         </section>
-        <section id="detailsPanel" class="studio-card glass"><p class="eyebrow" data-i18n="stepTwo">02 / MAKE IT YOURS</p><h2 data-i18n="details">The person behind the page.</h2>
+        <section id="detailsPanel" class="studio-card glass"><h2 data-i18n="details">The person behind the page.</h2>
           <div class="studio-field"><label for="fName" data-i18n="name">Full name</label><input id="fName" maxlength="120" autocomplete="name"></div>
           <div class="studio-field"><label for="fTitle" data-i18n="role">Professional title</label><input id="fTitle" maxlength="200"></div>
           <div class="studio-field"><label for="fContact" data-i18n="contact">Contact details & links</label><textarea id="fContact" rows="3" maxlength="1500"></textarea></div>
-          <div class="photo-row"><div id="photoPreview" class="photo-preview" aria-hidden="true">PHOTO</div><div><label class="button button-secondary button-sm" for="photoInput" data-i18n="uploadPhoto">Add a photo</label><input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="photo-file"><button id="photoRemove" class="button button-quiet button-sm" type="button" hidden data-i18n="removePhoto">Remove</button><p class="studio-small" data-i18n="photoHint">Optional · JPG, PNG or WebP · up to 5 MB. Center-cropped for the header.</p></div></div>
+          <div class="photo-row"><div id="photoPreview" class="photo-preview" aria-hidden="true">PHOTO</div><div><label class="button button-secondary button-sm" for="photoInput" data-i18n="uploadPhoto">Add a photo</label><input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="photo-file"><button id="photoRemove" class="button button-quiet button-sm" type="button" hidden data-i18n="removePhoto">Remove</button></div></div>
           <p id="photoStatus" class="studio-small" role="status"></p>
         </section>
-        <section class="studio-card glass"><h2 data-i18n="content">Words worth keeping.</h2><p class="studio-small" data-i18n="contentHint">Review the imported sections. Unknown content is kept under Additional information.</p>
+        <section class="studio-card glass"><h2 data-i18n="content">Words worth keeping.</h2>
           <details id="importDetails"><summary data-i18n="paste">Paste a complete resume</summary><label class="sr-only" for="rawResume" data-i18n="raw">Complete resume text</label><textarea id="rawResume" rows="7" maxlength="60000"></textarea><button id="applyText" class="button button-secondary button-sm" type="button" data-i18n="apply">Apply to fields</button><p class="studio-small" data-i18n="replaceHint">Replaces the fields below. Your template and photo stay selected.</p></details>
           <div id="sectionFields"></div>
           <button id="clearBtn" type="button" class="button button-quiet button-sm" data-i18n="clear">Clear this draft</button>
         </section>
       </aside>
       <section id="studioPreview" class="studio-preview glass" aria-label="PDF preview">
-        <div class="preview-toolbar"><div><p class="eyebrow" data-i18n="stepThree">03 / READY WHEN YOU ARE</p><h2 data-i18n="preview">Your PDF, as it will download.</h2></div><button id="exportPdfBtn" type="button" class="button button-primary" disabled data-i18n="download">Download PDF</button></div>
+        <div class="preview-toolbar"><div><h2 data-i18n="preview">Your PDF, as it will download.</h2></div><button id="exportPdfBtn" type="button" class="button button-primary" disabled data-i18n="download">Download PDF</button></div>
         <p id="exportStatus" class="studio-status" role="status" aria-live="polite"></p>
-        <p id="draftStatus" class="studio-small"></p>
-        <div id="resumePreview"><div class="preview-empty"><div class="preview-empty-inner"><div class="empty-visual" aria-hidden="true"><svg viewBox="0 0 64 64"><rect x="16" y="8" width="32" height="48" rx="7"></rect><circle cx="28" cy="23" r="5"></circle><path d="M24 36h16M24 43h10"></path><path class="accent-path" d="m37 49 3 3 7-8"></path></svg></div><h3 data-i18n="emptyTitle">A little space for your story.</h3><p data-i18n="empty">Your resume will appear here. Start with your rewrite or paste your text.</p></div></div></div>
-        <p class="studio-small preview-footnote" data-i18n="footnote">Selectable text, automatic page breaks, no watermark. Review every page before sending.</p>
+        <p id="draftStatus" class="studio-small" hidden></p>
+        <div id="resumePreview"><div class="preview-empty"><div class="preview-empty-inner"><div class="empty-visual" aria-hidden="true"><svg viewBox="0 0 64 64"><rect x="16" y="8" width="32" height="48" rx="7"></rect><circle cx="28" cy="23" r="5"></circle><path d="M24 36h16M24 43h10"></path><path class="accent-path" d="m37 49 3 3 7-8"></path></svg></div><h3 data-i18n="emptyTitle">A little space for your story.</h3></div></div></div>
+
       </section>
     </div>
+    <footer class="studio-credits"><a class="studio-small" href="/studio/credits.html" target="_blank" rel="noopener" data-i18n="credits">Template sources & licenses ↗</a></footer>
   </main>
   <script src="/vendor/pdf-lib.min.js"></script><script src="/vendor/fontkit.umd.min.js"></script>
   <script>window.studioPdfReady=import('/vendor/pdf.min.mjs').then(p=>{window.pdfjsLib=p;p.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';});window.studioPdfReady.catch(()=>{});</script>
