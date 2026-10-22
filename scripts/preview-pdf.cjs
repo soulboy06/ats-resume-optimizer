@@ -25,11 +25,7 @@ http.createServer(async (req, res) => {
     const target = fs.statSync(file).isDirectory() ? path.join(file, 'index.html') : file;
     let bytes = fs.readFileSync(target);
     if (target === path.join(root, 'index.html')) bytes = Buffer.from(bytes.toString('utf8')
-      .replace(/var WORKER_ORIGIN = '[^']+';/, "var WORKER_ORIGIN = '';")
-      .replace('</body>', `<div style="position:fixed;bottom:12px;left:12px;z-index:1000;background:#fff;padding:8px;border:1px solid #aaa"><strong>LOCAL QA ONLY</strong>
-        <button type="button" id="loadFixture">Load synthetic English PDF</button>
-        <button type="button" id="loadChineseFixture">Load synthetic Chinese PDF</button></div>
-        <script>async function loadFixture(name){const response=await fetch('/__fixtures__/'+name+'.pdf');const file=new File([await response.arrayBuffer()],name+'.pdf',{type:'application/pdf'});const transfer=new DataTransfer();transfer.items.add(file);const input=document.getElementById('pdfInput');input.files=transfer.files;input.dispatchEvent(new Event('change'));}document.getElementById('loadFixture').onclick=()=>loadFixture('original');document.getElementById('loadChineseFixture').onclick=()=>loadFixture('chinese-original');</script></body>`));
+      .replace(/var WORKER_ORIGIN = '[^']+';/, "var WORKER_ORIGIN = '';"));
     res.setHeader('Content-Type', types[path.extname(target)] || 'application/octet-stream');
     res.setHeader('Cache-Control', 'no-store'); res.end(bytes);
   } catch (_) { res.writeHead(404); res.end('Not found'); }

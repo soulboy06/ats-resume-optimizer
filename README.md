@@ -118,9 +118,9 @@ Unit tests cover native output, old-text removal, multipage/Chinese text, Form
 XObjects, overflow, unsupported documents and Worker mapping validation.
 
 `node scripts/preview-pdf.cjs` serves a localhost-only QA page on port 4178 with
-fictional resume fixtures and mocked AI. Its fixture buttons are injected by the
-test server and are not in production assets. No real AI calls or user documents
-are used. A production-like static preview can still be served as described above.
+mocked AI. Upload a PDF using the normal upload control; no fixture-loading buttons
+are added to the page. No real AI calls are made. A production-like static preview
+can still be served as described above.
 
 PDF dependencies and licenses are self-hosted under `pages-deploy/vendor/`.
 The CJK font is loaded only when needed. To refresh its upstream source and
