@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resume Template Library | CheckATS</title>
+  <meta name="description" content="Browse 30 resume templates. Filter single-column, sidebar and photo layouts, then apply a template to your existing resume draft.">
+  <link rel="canonical" href="https://checkats.online/studio/templates/">
+  <link rel="icon" href="/brand-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;600&amp;family=Noto+Serif+SC:wght@400;500;600&amp;family=Cormorant+Garamond:wght@400;500&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/components.css"><link rel="stylesheet" href="/styles/design.css">
+  <link rel="stylesheet" href="/studio/studio.css"><link rel="stylesheet" href="/studio/templates/library.css">
+</head>
+<body>
+<header class="nav-shell"><nav class="nav product-nav" aria-label="Main navigation">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg class="brand-symbol" viewBox="0 0 64 64" fill="#B44D30"><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(90 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(180 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(270 32 32)"/><path d="m32 28 4 4-4 4-4-4Z"/></svg></span><span>CheckATS</span></a>
+    <div class="nav-links product-nav-links">
+      <a href="/" data-home-link data-i18n="navAnalyzer" >Resume analyzer</a>
+      <a href="/studio/" data-studio-link data-i18n="navStudio" data-i18n-href-zh="/studio/?lang=zh" aria-current="page">PDF Studio</a>
+      <a href="/guide/" data-guide-link data-i18n="navGuide" data-i18n-href-zh="/zh/guide/">Guides</a>
+    </div><div class="language-toggle" role="group" aria-label="Language"><button class="lang-option active" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div>
+  </nav></header>
+  <main class="library-shell">
+    <a class="studio-back" id="libraryBack" href="/studio/"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg><span data-i18n="back">Back to studio</span></a>
+    <section class="library-intro"><h1 data-i18n="title">Resume template library</h1><a id="currentTemplate" class="current-template" href="/studio/"></a></section>
+    <section class="library-toolbar glass" aria-label="Template filters">
+      <div class="library-filters" role="group" aria-label="Template layout">
+        <button type="button" data-filter="all" aria-pressed="true" aria-controls="templateLibraryGrid"></button>
+        <button type="button" data-filter="single" aria-pressed="false" aria-controls="templateLibraryGrid"></button>
+        <button type="button" data-filter="columns" aria-pressed="false" aria-controls="templateLibraryGrid"></button>
+        <button type="button" data-filter="photo" aria-pressed="false" aria-controls="templateLibraryGrid"></button>
+      </div>
+      <label class="library-search"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" id="templateSearch" autocomplete="off" maxlength="100" aria-label="Search templates" placeholder="Search templates"></label>
+    </section>
+    <div class="library-results"><p id="libraryCount" role="status" aria-live="polite" aria-atomic="true"></p><span data-i18n="format">A4 / US Letter</span></div>
+    <div id="templateLibraryGrid" class="library-grid"></div>
+    <section id="libraryEmpty" class="library-empty glass" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6m-6 5h6m-6 5h4"/></svg><h2 data-i18n="empty">No matching templates</h2><button id="resetFilters" class="button button-secondary" type="button" data-i18n="reset">Clear filters</button></section>
+    <footer class="library-footer"><a id="libraryCredits" href="/studio/credits.html" data-i18n="credits">Template sources & licenses ↗</a></footer>
+  </main>
+  <script src="/studio/templates.js"></script><script src="/studio/templates/library.js"></script>
+</body>
+</html>

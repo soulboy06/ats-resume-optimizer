@@ -2,7 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const engine=require('../pages-deploy/studio/engine.js');
-const templates=require('../pages-deploy/studio/templates.js');
+const templates=require('../pages-deploy/studio/legacy-templates.js');
 const lib=require('pdf-lib'),fontkit=require('@pdf-lib/fontkit');
 const tmp=path.join(__dirname,'../tmp/pdfs');fs.mkdirSync(tmp,{recursive:true});
 const english=`ALEX MORGAN

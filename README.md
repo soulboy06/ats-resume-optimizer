@@ -68,13 +68,30 @@ AI to fit the uploaded layout. The studio creates a new resume from a template;
 it does not preserve the source PDF layout.
 
 The separate workbench uses the existing cream, graph-paper and terracotta UI.
-It provides three single-column templates (Classic, Modern and Minimal), editable
-bilingual section fields, optional center-cropped JPEG/PNG/WebP photo upload,
-A4/US Letter, text-size controls, and English/Chinese section headings. Classic
-adapts the MIT-licensed sb2nov/resume layout conventions; its license is retained
-in `pages-deploy/studio/licenses/`, with source attribution on `/studio/credits.html`.
-Modern and Minimal are original CheckATS layouts; no upstream personal resume
-content or stock photos are bundled.
+It provides **30 real Typst templates** from the audited MIT-0
+`davidculemann/typst-templates` snapshot, including single-column, sidebar,
+photo-header, editorial, grid and timeline layouts. The template carousel uses
+five full cards on a wide preview area and reduces the count on narrow screens.
+The carousel's **All 30** link opens `/studio/templates/`, a responsive gallery
+with single-column/sidebar/photo filters and bilingual name search. Selecting a
+card returns to the studio with the draft, photo and page settings intact. The
+selected template ID is consumed from the URL after restoration so a reload
+does not overwrite subsequent carousel changes.
+Editable bilingual sections, JPEG/PNG/WebP photo upload, A4/US Letter, text size
+from 8–16 pt in 0.5 pt steps, and body line spacing (template default or
+1/1.15/1.3/1.5/1.75/2×) are supported. Size and spacing persist with the draft
+and apply to both preview and export. English/Chinese headings, zoom and
+fullscreen preview are also supported. The original
+source snapshot, adapted layout functions and license are retained under
+`pages-deploy/studio/typst/` and `licenses/`. `/studio/credits.html` lists sources.
+Template thumbnails are generated from our test PDFs; upstream sample resume
+content and portraits are not inserted into user documents.
+
+Compilation runs in a dedicated browser worker using a self-hosted Typst Wasm
+compiler and local typefaces. First use downloads the engine and fonts; no resume
+or photo is sent to a rendering service. The 28 MB Wasm is distributed as a 10.7 MB
+gzip asset and decompressed in the worker, below the static host's 25 MiB per-file
+limit. A failed/timed-out compiler can be retried by editing a field.
 
 Preview and download use the **same PDF bytes**, with native selectable text,
 embedded fonts for Chinese, automatic pagination (up to 15 pages), and no watermark
@@ -99,6 +116,7 @@ npm run vendor
 npm test
 npm run test:scoring
 python scripts/verify-pdf-render.py
+python scripts/render-studio-thumbnails.py
 node scripts/preview-pdf.cjs
 ```
 
@@ -108,6 +126,14 @@ For production-like AI calls, serve `pages-deploy/` using the static server abov
 There is no frontend build step. Deploy `pages-deploy/` to publish the studio.
 The previous mapped-layout Worker API remains backwards-compatible, but this new
 studio flow uses the ordinary rewrite response and does not require mapped blocks.
+
+`tests/typst-studio.test.cjs` compiles all 30 templates in English and Chinese,
+checks text retention and page bounds, and exercises long resumes, sidebars,
+photos and literal Typst-like user input. PDFs are written to `tmp/pdfs/typst/`.
+The vendored assets are committed; no build is needed to deploy. To regenerate
+the template registry/layouts or pinned compiler, use
+`python scripts/vendor-studio-templates.py templates compiler`. The optional
+`fonts` step requires Python fontTools and downloads the pinned OFL font sources.
 
 PDF dependencies/licenses are self-hosted under `pages-deploy/vendor/`. The Noto
 Sans SC font loads only when needed and embeds intact to avoid missing CJK outlines.

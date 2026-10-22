@@ -95,6 +95,12 @@ input:focus-visible, select:focus-visible {
 .nav-links { gap: 28px; }
 .nav-links > a:not(.button) { font-size: 13px; font-weight: 400; }
 .nav-links .button-primary { color: #fff; }
+.nav.product-nav { display:grid; grid-template-columns:1fr auto 1fr; height:64px; }
+.product-nav>.brand { justify-self:start; }
+.product-nav>.language-toggle { justify-self:end; }
+.product-nav .product-nav-links { display:flex; align-items:center; justify-content:center; gap:36px; }
+.product-nav .product-nav-links>a { display:inline-flex; align-items:center; min-height:40px; white-space:nowrap; font-size:13px; text-decoration:none; }
+.product-nav .product-nav-links>a[aria-current=page] { color:var(--emerald); font-weight:600; }
 .language-toggle { background: rgb(231 235 221 / 30%); border-color: rgb(220 216 204 / 65%); border-radius: 24px; }
 .lang-option { min-width: 38px; min-height: 36px; padding: 4px 9px; border-radius: 20px; font-weight: 500; }
 .lang-option.active { color: var(--ink); background: rgb(255 253 248 / 85%); }
@@ -423,3 +429,5 @@ footer { background: none; border: 0; margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+/* The three product modules stay explicit on compact screens. */
+@media(max-width:700px){.nav.product-nav{grid-template-columns:1fr auto;height:auto;padding:10px 16px 8px;gap:0 12px}.product-nav .product-nav-links{grid-column:1/-1;grid-row:2;justify-self:center;width:100%;gap:28px;margin:2px 0 0}.product-nav .product-nav-links>a{display:inline-flex;font-size:12px;min-height:38px}.product-nav>.language-toggle{grid-column:2;grid-row:1}.product-nav>.brand{grid-column:1;grid-row:1}.nav-shell:has(.product-nav){top:12px;border-radius:26px;width:calc(100% - 32px);margin-top:16px}}

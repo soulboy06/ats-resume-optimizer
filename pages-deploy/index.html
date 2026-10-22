@@ -76,16 +76,14 @@
   <link rel="stylesheet" href="/styles/design.css" />
 </head>
 <body>
-  <header class="nav-shell">
-    <nav class="nav" aria-label="Main navigation" data-i18n-aria="navAria">
-      <a class="brand" href="#top" aria-label="CheckATS home" data-i18n-aria="homeAria"><span class="brand-mark" aria-hidden="true"><svg class="brand-symbol" viewBox="0 0 64 64" fill="#B44D30"><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(90 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(180 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(270 32 32)"/><path d="m32 28 4 4-4 4-4-4Z"/></svg></span><span>CheckATS</span></a>
-      <div class="nav-links">
-        <a href="#analyzer" data-i18n="navAnalyzer">Analyzer</a>
-        <a href="#how" data-i18n="navHow">How it works</a>
-        <div class="language-toggle" role="group" aria-label="Language" data-i18n-aria="languageAria"><button type="button" class="lang-option active" data-lang="en" aria-pressed="true">EN</button><button type="button" class="lang-option" data-lang="zh" aria-pressed="false">中文</button></div><a class="button button-primary button-sm nav-cta" href="#analyzer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"></path><path d="m8 12 3 3 5-6"></path></svg><span data-i18n="navCta">Check my resume</span></a>
-      </div>
-    </nav>
-  </header>
+<header class="nav-shell"><nav class="nav product-nav" aria-label="Main navigation">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg class="brand-symbol" viewBox="0 0 64 64" fill="#B44D30"><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(90 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(180 32 32)"/><path d="M29 29C14 29 8 22 12 15c4-7 16-2 17 14Z" transform="rotate(270 32 32)"/><path d="m32 28 4 4-4 4-4-4Z"/></svg></span><span>CheckATS</span></a>
+    <div class="nav-links product-nav-links">
+      <a href="/" data-home-link data-i18n="navAnalyzer" data-i18n-href-zh="/?lang=zh" aria-current="page">Resume analyzer</a>
+      <a href="/studio/" data-studio-link data-i18n="navStudio" data-i18n-href-zh="/studio/?lang=zh" >PDF Studio</a>
+      <a href="/guide/" data-guide-link data-i18n="navGuide" data-i18n-href-zh="/zh/guide/">Guides</a>
+    </div><div class="language-toggle" role="group" aria-label="Language"><button class="lang-option active" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div>
+  </nav></header>
 
   <main id="top">
     <section class="hero" aria-labelledby="heroTitle">
@@ -444,7 +442,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
 
           previewKeywords:'Keyword alignment', previewParsing:'Text parseability', heroCapabilitiesAria:'What you can do', heroFeatureOne:'Find keyword gaps', heroFeatureTwo:'Get an AI review', heroFeatureThree:'Refine your story', heroLocal:'Free to use · No account needed', previewTitle:'A little more aligned.', previewCopy:'Small changes. A stronger first impression.', previewExample:'Example score', resumeHint:'Paste text or import a text-based PDF', jobHint:'The more specific the role, the better the match', reportTitle:'A clearer next step.', reportCopy:'See where you align, and where a few thoughtful changes can help.', editMaterials:'Edit documents', parseMetricNote:'Four checks of your plain text', parseChecksTitle:'A clean, readable resume.', keywordDetailsTitle:'The words that connect you.', keywordDictNote:'Skill keywords come from a 35,000+ cross-occupation skills dictionary; generic filler words are excluded.',
           title:'Free ATS Resume Checker & JD Matcher | CheckATS', navAria:'Main navigation', homeAria:'CheckATS home', languageAria:'Language',
-          navAnalyzer:'Analyzer', navHow:'How it works', navCta:'Check my resume',
+          navStudio:'PDF Studio', navGuide:'Guides', navAnalyzer:'Resume analyzer', navHow:'How it works', navCta:'Check my resume',
           heroKicker:'A LITTLE CLARITY. A NEW CHAPTER.', heroTitle:'Free ATS<br> <span>resume checker.</span>',
           heroCopy:'Match your resume to a job description, find missing keywords, and check extracted text. Get optional AI feedback and a rewrite, with no account needed.',
           heroAnalyze:'Start with your resume', heroScoring:'See how scoring works', proofAria:'Product highlights',
@@ -481,7 +479,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
 
           previewKeywords:'岗位关键词匹配', previewParsing:'文本可解析性', heroCapabilitiesAria:'你可以获得的帮助', heroFeatureOne:'发现关键词缺口', heroFeatureTwo:'获得 AI 深度点评', heroFeatureThree:'优化经历表达', heroLocal:'免费使用 · 无需注册', previewTitle:'离心仪岗位，再近一点', previewCopy:'一点调整，让好经历更有说服力。', previewExample:'示例评分', resumeHint:'支持粘贴文本或导入文字版 PDF', jobHint:'职位描述越具体，匹配建议越准确', reportTitle:'看见你的下一步。', reportCopy:'找到已经契合的优势，也找到值得调整的地方。', editMaterials:'修改材料', parseMetricNote:'基于纯文本的四项基础检查', parseChecksTitle:'让简历更容易被读取', keywordDetailsTitle:'让经历与岗位连接的词。', keywordDictNote:'技能关键词来自 35,000+ 全职业技能词典，通用虚词已排除。',
           title:'Free ATS Resume Checker & JD Matcher | CheckATS', navAria:'主导航', homeAria:'CheckATS 首页', languageAria:'语言选择',
-          navAnalyzer:'简历分析', navHow:'工作原理', navCta:'检测简历',
+          navStudio:'PDF 工作台', navGuide:'使用指南', navAnalyzer:'简历分析', navHow:'工作原理', navCta:'检测简历',
           heroKicker:'A LITTLE CLARITY. A NEW CHAPTER.', heroTitle:'免费 ATS<br><span>简历检测。</span>',
           heroCopy:'对照岗位描述检查简历关键词和提取文本，按需获取 AI 点评与改写，无需注册账号。',
           heroAnalyze:'从简历开始', heroScoring:'查看评分原理', proofAria:'产品亮点',
@@ -1392,7 +1390,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         finally{analyzeBtn.disabled=false;uploadWrap.classList.remove('loading');uploadWrap.innerHTML=icon('upload')+'<span class="button-label">'+esc(t('uploadButton'))+'</span>';pdfInput.value='';}
       });
 
-      applyLanguage('en');
+      applyLanguage(new URLSearchParams(window.location.search).get('lang') === 'zh' ? 'zh' : 'en');
       updateCounts();
     })();
   </script>
