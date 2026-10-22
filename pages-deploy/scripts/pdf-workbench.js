@@ -3,6 +3,9 @@
   const engine = window.CheckATSPdf;
   const host = document.getElementById('pdfWorkbench');
   let lang = 'en', model = null, draft = null, result = null, revision = 0, pageIndex = 0, pending = false, error = '', activeText = '';
+  // Studio mode: main page no longer shows PDF preview. If host is missing,
+  // expose only importFile (for PDF upload text extraction), skip UI.
+  const uiEnabled = !!host;
   let unicodeBytes;
   const messages = {
     en: {
@@ -103,7 +106,7 @@
     }
   }
 
-  async function paint() {
+  async function paint() { if (!uiEnabled) return;
     const version = revision;
     host.hidden = !model && !pending && !error;
     host.replaceChildren(); if (host.hidden) return;
