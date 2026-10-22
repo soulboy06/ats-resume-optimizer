@@ -70,4 +70,20 @@
     <p><a href="/guide/ats-resume-checklist-software-engineers/">Software engineer resume checklist</a> · <a href="/guide/">All guides</a></p>
 </main>
   <footer>CheckATS · <a href="/">Free ATS resume checker</a> · <a href="/guide/">Guides</a> · <a href="/methodology/">Scoring and data handling</a></footer>
+<script>
+(function(){
+  var m = location.search.match(/[?&]pass=([^&]+)/);
+  if (!m) return;
+  var pass = m[1];
+  document.querySelectorAll('a[href]').forEach(function(a){
+    var href = a.getAttribute('href');
+    // 只处理站内链接
+    if (!href || href.charAt(0) !== '/') return;
+    if (href.indexOf('pass=') !== -1) return;
+    // 跳过锚点
+    if (href.charAt(0) === '#') return;
+    a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
+  });
+})();
+</script>
 </body></html>

@@ -151,5 +151,21 @@
   <footer>
     © 2026 <a href="/?lang=zh">CheckATS</a> · 免费 ATS 简历检测与 AI 优化。
   </footer>
+<script>
+(function(){
+  var m = location.search.match(/[?&]pass=([^&]+)/);
+  if (!m) return;
+  var pass = m[1];
+  document.querySelectorAll('a[href]').forEach(function(a){
+    var href = a.getAttribute('href');
+    // 只处理站内链接
+    if (!href || href.charAt(0) !== '/') return;
+    if (href.indexOf('pass=') !== -1) return;
+    // 跳过锚点
+    if (href.charAt(0) === '#') return;
+    a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
+  });
+})();
+</script>
 </body>
 </html>
