@@ -78,12 +78,14 @@
   ]
 }
   </script>
-<link rel="stylesheet" href="/styles/guide.css" />
   <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
-</head>
-<body>
-  <nav class="top"><a href="https://checkats.online/">← CheckATS</a> · <a href="/zh/guide/ats-resume-template-software-engineers/">中文版</a></nav>
-  <main class="wrap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;600&amp;family=Noto+Serif+SC:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/components.css"><link rel="stylesheet" href="/styles/design.css"><link rel="stylesheet" href="/styles/guide.css"><script src="/scripts/guides.js" defer></script>
+</head><body class="docs-page"><a class="skip-link" href="#docs-main">Skip to content</a>
+<header class="nav-shell"><nav class="nav product-nav" aria-label="Main navigation">
+<a class="brand" href="/"><span class="brand-mark"><img class="brand-symbol" src="/brand-mark.svg" width="25" height="25" alt=""></span><span>CheckATS</span></a>
+<div class="nav-links product-nav-links"><a href="/">Resume analyzer</a><a href="/studio/">PDF Studio</a><a href="/guide/" aria-current="page">Guides</a></div>
+<div class="language-toggle" aria-label="Language"><a class="lang-option active" href="/guide/ats-resume-template-software-engineers/" lang="en" hreflang="en" aria-current="true">EN</a><a class="lang-option" href="/zh/guide/ats-resume-template-software-engineers/" lang="zh-CN" hreflang="zh-CN">中文</a></div></nav></header><div class="docs-layout docs-layout-article"><aside class="docs-sidebar"><details class="docs-menu"><summary>Guide menu<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></summary><nav aria-label="Guide navigation"><h2>Guides</h2><a class="docs-overview" href="/guide/"><span aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14m0-14C9 4 5 4 2 5v15c3-1 7-1 10 1 3-2 7-2 10-1V5c-3-1-7-1-10 2Z"></path></svg></span>Guide overview</a><div class="docs-nav-group"><p>Resume writing</p><a href="/guide/ats-resume-checklist-software-engineers/">ATS resume checklist</a><a href="/guide/ats-resume-template-software-engineers/" aria-current="page">ATS-friendly template</a></div><div class="docs-nav-group"><p>Tool comparisons</p><a href="/guide/checkats-vs-jobscan/">CheckATS vs Jobscan</a><a href="/guide/free-jobscan-alternative/">Free Jobscan alternatives</a></div><div class="docs-nav-group"><p>About CheckATS</p><a href="/methodology/">Scoring and data</a></div><div class="docs-side-cta"><p>Ready to check your resume?</p><a href="/#analyzer">Check your resume ↗</a></div></nav></details></aside><main id="docs-main" class="docs-main"><p class="docs-breadcrumb"><a href="/guide/">Guides</a> / Resume writing</p><details class="docs-mobile-toc"><summary>On this page<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></summary><nav aria-label="On this page"><a href="#section-1">What does an ATS-friendly resume template look like?</a><a href="#section-2">How should I fill in each section of the template?</a><a href="#section-3">Which template features break ATS parsing?</a><a href="#section-4">How do I know my template actually works?</a><a href="#section-5">Frequently asked questions</a><a href="#section-6">Sources and what this template guide can verify</a><a href="#section-7">Keep reading</a></nav></details><article class="docs-article"><!-- docs-content:start -->
     <h1>ATS-Friendly Resume Template for Software Engineers (2026)</h1>
     <p class="meta">CheckATS · Updated October 14, 2026</p>
     <p class="lede">You do not need a designer to get past an applicant tracking system — you need a deliberately boring template. This guide gives software engineers an ATS-friendly resume template for 2026: the sections to include, the order to put them in, and how to verify that the text the software extracts matches the file your recruiter sees. No template guarantees an interview, but a clean one removes formatting as a reason to fail.</p>
@@ -92,7 +94,7 @@
       <p style="margin:0;font-size:15px;color:#14532d;"><strong style="color:#14532d;">The short answer:</strong> an ATS-friendly resume template for software engineers is a single-column, text-based layout with standard section headers (Summary, Skills, Experience, Education), exact technology names in a dedicated Skills section, and a selectable-text PDF export. Skip graphics, tables, and columns — then verify the result by checking the extracted text yourself.</p>
     </div>
 
-    <h2>What does an ATS-friendly resume template look like?</h2>
+    <h2 id="section-1">What does an ATS-friendly resume template look like?</h2>
     <p><strong>The answer:</strong> it looks boring — one column of plain text with your name and contact info at the top, then Summary, Skills, Experience, and Education under standard headers. No tables, no graphics, no columns, no unusual fonts. Every parser reads this layout the same way: top to bottom, line by line.</p>
     <p>The full skeleton — copy it into any text editor and it already works. The point of the template is that there is nothing clever in it for a parser to get wrong:</p>
     <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;overflow-x:auto;font-size:14px;line-height:1.7;">YOUR NAME
@@ -124,7 +126,7 @@ EDUCATION
 B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p>Notice what is missing: no sidebar, no skill bars, no photo, no icons, no header or footer tricks. Each of those asks the parser to guess. The template also fixes keyword dilution: exact technology names near the top in the Skills section let a keyword scan find them immediately. Generic soft-skill words like "team player" do not belong here — CheckATS deliberately excludes them from keyword counting, since they match everything and signal nothing.</p>
 
-    <h2>How should I fill in each section of the template?</h2>
+    <h2 id="section-2">How should I fill in each section of the template?</h2>
     <p><strong>The answer:</strong> put contact info on separate plain-text lines; write a two-to-three-line summary naming your stack; list exact technology names in Skills, spelled exactly as job posts spell them; write experience bullets as verb plus task plus quantified result; and keep dates in one consistent month-year format. Accuracy matters more than volume — never claim a skill you do not have.</p>
     <p><strong>Contact.</strong> Email and phone each get their own line in plain text — not in a page header, graphic, or icon, since some extractors read headers separately and a missing email is the most common mechanical failure. Include your city, your LinkedIn URL, and your GitHub URL, where no parser can miss them.</p>
     <p><strong>Summary.</strong> Two to three lines with one job to do: name your years of experience, your core stack, and one quantified result. "Backend engineer with 4 years in Go and Python; built billing services processing $2M monthly; ex-Stripe." If you cannot fill three lines honestly, write two — a padded summary is worse than a short one.</p>
@@ -133,7 +135,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p><strong>Projects.</strong> Optional, but for engineers with open-source work or side projects, one line on the stack and one line on the result is enough — with a link to the repository. Project technologies feed the same exact-term matching as the Skills section.</p>
     <p><strong>Education.</strong> Degree, school, dates. Keep it at the bottom unless you are a new graduate, in which case it moves above Experience.</p>
 
-    <h2>Which template features break ATS parsing?</h2>
+    <h2 id="section-3">Which template features break ATS parsing?</h2>
     <p><strong>The answer:</strong> multi-column layouts, tables used for structure, text inside graphics or icons, contact info hidden in headers or footers, uncommon fonts with custom encoding, and scanned-image PDFs. None of these fails every parser — but each one scrambles reading order or hides text from an extractor, so the conservative choice is to avoid all of them.</p>
     <p><strong>Two columns.</strong> The most common offender. Some parsers read left column then right; others read straight across the row, stitching unrelated sentences together. You cannot control which one your employer's system uses.</p>
     <p><strong>Tables.</strong> Tables used purely for visual alignment (name left, dates right) often extract as a jumbled sequence. Use tabs or spacing instead — alignment that is plain text underneath.</p>
@@ -141,7 +143,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
     <p><strong>Headers and footers.</strong> Some parsers treat header/footer content as metadata and strip it; others repeat it on every page. Contact info placed there can vanish or duplicate — keep it in the body of the document.</p>
     <p><strong>Scanned or image-based PDFs.</strong> If you cannot select and copy the text, neither can the parser. CheckATS evaluates extracted text and imports text-based PDFs and pasted text; it does not run OCR on scanned PDFs, so a scanned resume is unreadable to this tool regardless of how good the template was.</p>
 
-    <h2>How do I know my template actually works?</h2>
+    <h2 id="section-4">How do I know my template actually works?</h2>
     <p><strong>The answer:</strong> do the copy-paste test — select all text in your PDF, paste it into a plain text file, and confirm nothing is missing and the reading order is correct. Then run an ATS check with a real job description: CheckATS scores JD exact-term keyword coverage at 60% and plain-text parseability (contact info, consistent dates, no garbled text, reasonable length) at 40%.</p>
     <p>The copy-paste test takes ten seconds and catches most formatting failures: missing contact lines, scrambled column order, garbled characters from an unusual font. If the pasted text reads like a coherent document, your template's structure is fine.</p>
     <p>The ATS check tests the other half: relevance. Paste your resume and the actual job description into the checker and look at which must-have keywords are missing. A low keyword score usually means a wording problem — the JD says "Kubernetes" and you only wrote "K8s" — not a template problem. CheckATS counts what you wrote, exactly as you wrote it, by design.</p>
@@ -152,7 +154,7 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
       <a href="https://checkats.online/">Run the free ATS check →</a>
     </div>
 
-    <h2>Frequently asked questions</h2>
+    <h2 id="section-5">Frequently asked questions</h2>
     <div class="faq">
       <h3>Is a PDF or a DOCX safer for an ATS-friendly resume?</h3>
       <p>Follow the employer's instructions first. When you get a choice, a text-based PDF whose text you can select and copy is a safe default. CheckATS imports text-based PDFs and pasted text; it does not import DOCX files or run OCR on scanned PDFs.</p>
@@ -163,33 +165,12 @@ B.S. Computer Science — University | 2017-09 – 2021-06</pre>
       <h3>Should my ATS-friendly resume be one page or two?</h3>
       <p>One page is the norm for early-career engineers; two pages is fine once you have roughly eight to ten years of relevant experience. Page count is not what parsers care about — clean extracted text is. Keep it concise enough that a recruiter can scan it in under a minute.</p>
     </div>
-    <h2>Sources and what this template guide can verify</h2>
+    <h2 id="section-6">Sources and what this template guide can verify</h2>
     <p><a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ">Greenhouse Talent Matching FAQ</a> describes related-term matching and human decisions for that feature; it is not documentation for every ATS. Product-specific statements above follow the <a href="/methodology/">CheckATS scoring method</a>.</p>
-        <h2>Keep reading</h2>
+        <h2 id="section-7">Keep reading</h2>
     <div class="answer-box">
       <p style="margin:0 0 10px;"><strong><a href="/guide/ats-resume-checklist-software-engineers/">ATS Resume Checklist for Software Engineers (2026)</a></strong><br>Ten checks for keywords, readable text, and clear experience — before you format anything.</p>
       <p style="margin:0;"><strong><a href="/methodology/">How our ATS score works</a></strong><br>The exact formula behind the score: 60% JD keyword coverage plus 40% text checks. No black box.</p>
     </div>
 <p><a href="/guide/">All resume guides</a> · <a href="/methodology/">Scoring and data handling</a></p>
-  </main>
-  <footer>
-    © 2026 <a href="https://checkats.online/">CheckATS</a> · Free ATS resume checker and AI optimizer.
-  </footer>
-<script>
-(function(){
-  var m = location.search.match(/[?&]pass=([^&]+)/);
-  if (!m) return;
-  var pass = m[1];
-  document.querySelectorAll('a[href]').forEach(function(a){
-    var href = a.getAttribute('href');
-    // 只处理站内链接
-    if (!href || href.charAt(0) !== '/') return;
-    if (href.indexOf('pass=') !== -1) return;
-    // 跳过锚点
-    if (href.charAt(0) === '#') return;
-    a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
-  });
-})();
-</script>
-</body>
-</html>
+  <!-- docs-content:end --></article><div class="docs-article-footer"><a href="/guide/">← All guides</a><a href="/guide/ats-resume-checklist-software-engineers/">Keep reading →</a></div></main><aside class="docs-toc"><h2>On this page</h2><nav aria-label="On this page"><a href="#section-1">What does an ATS-friendly resume template look like?</a><a href="#section-2">How should I fill in each section of the template?</a><a href="#section-3">Which template features break ATS parsing?</a><a href="#section-4">How do I know my template actually works?</a><a href="#section-5">Frequently asked questions</a><a href="#section-6">Sources and what this template guide can verify</a><a href="#section-7">Keep reading</a></nav><a class="docs-toc-cta" href="/#analyzer">Check my resume ↗</a></aside></div><footer class="docs-footer"><span>CheckATS · Resume guides</span><a href="/">Back to resume analyzer ↗</a></footer></body></html>

@@ -146,4 +146,12 @@ PDF render checks use Python PyMuPDF; inspect generated pages after font/layout 
 
 Public pages use the CheckATS name, self-canonical URLs, crawlable guide links, and factual structured data. `/methodology/` documents the actual local score and external data processing. `llms.txt` is an optional summary, not a search inclusion requirement.
 
+The English and Chinese guide indexes, eight guide articles and two methodology
+pages share the editorial document layout in `styles/guide.css`. The guide index
+supports local search; article pages have a sticky table of contents and collapsible
+mobile navigation. Language links open the corresponding article and Chinese home
+links keep `?lang=zh`. Run `python scripts/build-guide-layout.py` to refresh the
+shared shell while retaining article HTML, metadata and structured data. Original
+article content is kept between the `docs-content` markers; edit it there.
+
 Run `python3 scripts/verify-seo.py` and `node scripts/verify-scoring.cjs` before publishing. After deployment, submit the sitemap and inspect public URLs in Search Console and Bing Webmaster Tools. Confirm CDN crawler access and track tool usage from organic and AI referrals.

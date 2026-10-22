@@ -301,7 +301,13 @@ textarea { scrollbar-width: thin; scrollbar-color: #c4bba966 transparent; }
 #how { padding-top: 72px; }
 .section-heading.center { text-align: left; margin-left: 0; margin-right: 0; }
 .steps { gap: 24px; background: none; border: 0; overflow: visible; }
-.step { padding: 28px; }
+/* Static cards avoid backdrop repaint artifacts when scrolling the long homepage. */
+.step {
+  padding: 28px;
+  background: #fcfaf4;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .step-num { background: none; color: var(--emerald); width: auto; height: auto; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 40px; font-weight: 400; margin-bottom: 16px; }
 .step h3 { font-size: 18px; font-weight: 500; margin: 16px 0 8px; }
 .step p { font-size: 13px; }
