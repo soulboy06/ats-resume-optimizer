@@ -63,5 +63,18 @@
   <script src="/vendor/pdf-lib.min.js"></script><script src="/vendor/fontkit.umd.min.js"></script>
   <script>window.studioPdfReady=import('/vendor/pdf.min.mjs').then(p=>{window.pdfjsLib=p;p.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';});window.studioPdfReady.catch(()=>{});</script>
   <script src="/studio/templates.js"></script><script src="/studio/engine.js"></script><script src="/studio/typst-adapter.js"></script><script src="/studio/typst-engine.js"></script><script src="/studio/studio.js"></script>
+<script>
+(function(){
+  var m = location.search.match(/[?&]pass=([^&]+)/);
+  if (!m) return;
+  var pass = m[1];
+  document.querySelectorAll('a[href="/"], a[href^="/?"]').forEach(function(a){
+    var href = a.getAttribute('href');
+    if (href.indexOf('pass=') === -1) {
+      a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
+    }
+  });
+})();
+</script>
 </body>
 </html>

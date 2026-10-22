@@ -84,6 +84,25 @@
       <a href="/guide/" data-guide-link data-i18n="navGuide" data-i18n-href-zh="/zh/guide/">Guides</a>
     </div><div class="language-toggle" role="group" aria-label="Language"><button class="lang-option active" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div>
   </nav></header>
+<script>
+// 保留 ?pass= 参数：带 pass 访问时，导航链接自动带上 pass
+(function(){
+  var m = location.search.match(/[?&]pass=([^&]+)/);
+  if (!m) return;
+  var pass = m[1];
+  document.querySelectorAll('.product-nav-links a[href]').forEach(function(a){
+    var href = a.getAttribute('href');
+    if (href.indexOf('pass=') === -1) {
+      a.href = href + (href.indexOf('?') === -1 ? '?' : '&') + 'pass=' + encodeURIComponent(pass);
+    }
+  });
+  // logo 也保留
+  var brand = document.querySelector('.product-nav .brand');
+  if (brand && brand.getAttribute('href').indexOf('pass=') === -1) {
+    brand.href = '/?pass=' + encodeURIComponent(pass);
+  }
+})();
+</script>
 
   <main id="top">
     <section class="hero" aria-labelledby="heroTitle">
