@@ -61,40 +61,11 @@
     </div>
   </main>
 
-  <div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
-    <section class="auth-dialog" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <div class="auth-head">
-        <div><h2 id="authTitle" data-i18n="authTitle">Log in</h2><p data-i18n="authPasswordIntro">Log in with your email and password on any device.</p></div>
-        <button class="auth-close" id="authClose" type="button" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
-      </div>
-      <form id="authForm" novalidate>
-        <div class="auth-field">
-          <label for="authEmail" data-i18n="authEmailLabel">Email</label>
-          <input id="authEmail" name="email" type="email" required maxlength="240" autocomplete="email" placeholder="you@example.com">
-        </div>
-        <div class="auth-field" id="authPasswordField">
-          <label for="authPassword" data-i18n="authPasswordLabel">Password</label>
-          <input id="authPassword" name="password" type="password" maxlength="128" autocomplete="current-password" placeholder="••••••••">
-          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
-        </div>
-        <div class="auth-actions"><button class="button button-primary" id="authSubmit" type="submit"><span class="button-label" data-i18n="authSignIn">Log in</span></button></div>
-        <p class="auth-switch" id="authSwitch"><button type="button" id="authSwitchBtn" class="auth-link-btn" data-i18n="authNeedAccount">No account? Sign up</button> · <button type="button" id="authForgotBtn" class="auth-link-btn" data-i18n="authForgotPassword">Forgot password?</button></p>
-        <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
-      </form>
-      <form id="authRecoveryForm" novalidate hidden>
-        <div class="auth-field">
-          <label for="authNewPassword" data-i18n="authNewPasswordLabel">New password</label>
-          <input id="authNewPassword" name="new-password" type="password" maxlength="128" autocomplete="new-password" placeholder="••••••••">
-          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
-        </div>
-        <div class="auth-actions"><button class="button button-primary" id="authRecoverySubmit" type="submit"><span class="button-label" data-i18n="authSetPassword">Set new password</span></button></div>
-        <p class="auth-status" id="authRecoveryStatus" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-  </div>
+  <div class="auth-backdrop" id="authBackdrop" aria-hidden="true"><section class="auth-dialog" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle"></section></div>
 
   <script src="/vendor/pdf-lib.min.js"></script><script src="/vendor/fontkit.umd.min.js"></script>
   <script src="/scripts/auth.js"></script>
+  <script src="/scripts/auth-ui.js"></script>
   <script>window.studioPdfReady=import('/vendor/pdf.min.mjs').then(p=>{window.pdfjsLib=p;p.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';});window.studioPdfReady.catch(()=>{});</script>
   <script src="/studio/templates.js"></script><script src="/studio/engine.js"></script><script src="/studio/typst-adapter.js"></script><script src="/studio/typst-engine.js"></script><script src="/studio/studio.js"></script>
 <script>
