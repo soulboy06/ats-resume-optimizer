@@ -43,7 +43,7 @@ test('both AI routes accept normal resumes, including security work, with fixed 
   assert.equal(app.calls.rewrite[0].response_format.type,'json_object');
   assert.equal(app.calls.rewrite[0].tools,undefined);
   assert.equal(app.calls.review[0].tools,undefined);
-  assert.equal(app.calls.review[0].response_format.type,'json_object');
+  
  }
 });
 

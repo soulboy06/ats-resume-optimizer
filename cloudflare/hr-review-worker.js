@@ -801,7 +801,7 @@ return { dimensions, overall: dimParsed.overall.trim(), model };
 }
 
 async function runTextOne(env, model, messages, maxTokens = 1024, temperature, seed) {
-const params = { messages, max_tokens: maxTokens, response_format: { type: 'json_object' } };
+const params = { messages, max_tokens: maxTokens };
 if (typeof temperature === "number") params.temperature = temperature;
 if (typeof seed === "number") params.seed = seed;
 const out = await env.AI.run(model, params);
