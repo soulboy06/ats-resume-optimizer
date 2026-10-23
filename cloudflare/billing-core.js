@@ -13,7 +13,9 @@ const SCHEMA=[
 `CREATE INDEX IF NOT EXISTS saved_jobs_user ON saved_jobs(user_id,updated_at DESC)`,
 `CREATE TABLE IF NOT EXISTS billing_purchases(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,plan TEXT NOT NULL,product_id TEXT NOT NULL,checkout_id TEXT,created_at INTEGER NOT NULL)`,
 `CREATE TABLE IF NOT EXISTS billing_orders(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,plan TEXT NOT NULL,points INTEGER NOT NULL,subscription_id TEXT,period_end INTEGER NOT NULL DEFAULT 0,period_start INTEGER NOT NULL DEFAULT 0,customer_id TEXT,amount INTEGER NOT NULL,currency TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,grant_state INTEGER NOT NULL DEFAULT 0,transaction_id TEXT)`,
-`CREATE TABLE IF NOT EXISTS billing_webhooks(id TEXT PRIMARY KEY,created_at INTEGER NOT NULL)`
+`CREATE TABLE IF NOT EXISTS billing_webhooks(id TEXT PRIMARY KEY,created_at INTEGER NOT NULL)`,
+`CREATE TABLE IF NOT EXISTS billing_fulfillments(purchase_id TEXT NOT NULL,order_id TEXT NOT NULL,PRIMARY KEY(purchase_id,order_id))`,
+`CREATE TABLE IF NOT EXISTS billing_payment_reviews(event_id TEXT PRIMARY KEY,order_id TEXT NOT NULL,reason TEXT NOT NULL,created_at INTEGER NOT NULL)`
 ];
 function fail(code,status=400){throw Object.assign(new Error(code),{code,status});}
 const changed=r=>Number(r?.meta?.changes||0)>0;
@@ -104,7 +106,13 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
    try{await db.batch([prepare(db,'INSERT OR IGNORE INTO billing_exports(user_id,fingerprint,created_at) VALUES(?,?,?)',user.id,fp,Date.now()),prepare(db,`INSERT OR IGNORE INTO billing_ledger(id,user_id,kind,delta,permanent_delta,subscription_delta,created_at) SELECT ?,user_id,'export',-permanent_spent-subscription_spent,-permanent_spent,-subscription_spent,? FROM billing_usage WHERE user_id=? AND request_id=? AND status='reserved'`,'usage:'+user.id+':'+key,Date.now(),user.id,key),prepare(db,`UPDATE billing_usage SET status='complete',response='{}',response_status=200 WHERE user_id=? AND request_id=? AND status='reserved'`,user.id,key)]);return reply({authorized:true,cost});}catch(e){await settle(db,user.id,key,false);throw e;}
   }
   if(path==='/api/billing/checkout'&&request.method==='POST')return await checkout(request,env,user,a);
-  if(path==='/api/billing/portal'&&request.method==='POST'){if(!a.customer_id)fail('INVALID_INPUT');const data=await creem(env,'/v1/customers/billing',{customer_id:a.customer_id});return reply({url:data.customer_portal_link});}
+  if(path==='/api/billing/checkout/status'&&request.method==='GET'){
+   const id=short(url.searchParams.get('purchase_id'),100);
+   const purchase=await prepare(db,'SELECT id,plan FROM billing_purchases WHERE id=? AND user_id=?',id,user.id).first();if(!purchase)fail('NOT_FOUND',404);
+   const order=await prepare(db,`SELECT o.id,o.status,o.grant_state FROM billing_orders o JOIN billing_fulfillments f ON f.order_id=o.id WHERE f.purchase_id=? AND o.user_id=? ORDER BY o.created_at DESC LIMIT 1`,id,user.id).first();
+   return reply({purchase_id:id,plan:purchase.plan,status:order?(order.status==='paid'&&order.grant_state===1?'fulfilled':order.status):'pending'});
+  }
+  if(path==='/api/billing/portal'&&request.method==='POST'){if(!a.customer_id)fail('INVALID_INPUT');const data=await creem(env,'/v1/customers/billing',{customer_id:a.customer_id});return reply({url:creemLink(data.customer_portal_link)});}
   if(path==='/api/jobs'||path.startsWith('/api/jobs/'))return await jobsRoute(request,db,user,a,path);
   fail('NOT_FOUND',404);
  }catch(e){return errorResponse(e);}}
@@ -135,13 +143,21 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
   if(request.method==='PUT'&&id){if(!Number.isSafeInteger(b.expected_updated_at))fail('INVALID_INPUT');const updated=Math.max(now,b.expected_updated_at+1);const r=await prepare(db,'UPDATE saved_jobs SET company=?,role=?,snapshot=?,updated_at=? WHERE id=? AND user_id=? AND updated_at=?',company,role,snapshotText,updated,id,user.id,b.expected_updated_at).run();if(!changed(r))fail('CONFLICT',409);return reply({job:{id,company,role,snapshot:safe,updated_at:updated}});}
   fail('METHOD_NOT_ALLOWED',405);
  }
- async function creem(env,path,body){if(!env.CREEM_API_KEY)fail('PAYMENTS_UNAVAILABLE',503);const base=env.CREEM_TEST_MODE==='true'?'https://test-api.creem.io':'https://api.creem.io';const response=await fetch(base+path,{method:'POST',headers:{'x-api-key':env.CREEM_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)fail('PAYMENTS_UNAVAILABLE',503);return data;}
+ async function creem(env,path,body){
+  if(!env.CREEM_API_KEY)fail('PAYMENTS_UNAVAILABLE',503);
+  const base=env.CREEM_TEST_MODE==='true'?'https://test-api.creem.io':'https://api.creem.io',controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+  try{const response=await fetch(base+path,{method:'POST',signal:controller.signal,headers:{'x-api-key':env.CREEM_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)fail('PAYMENTS_UNAVAILABLE',503);return data;}catch(_){fail('PAYMENTS_UNAVAILABLE',503);}finally{clearTimeout(timeout);}
+ }
+ function creemLink(value){try{const u=new URL(value);if(u.protocol==='https:'&&!u.username&&!u.password&&/(^|\.)creem\.io$/.test(u.hostname))return u.href;}catch(_){}fail('PAYMENTS_UNAVAILABLE',503);}
  async function checkout(request,env,user,a){
   const b=await jsonBody(request,3000);if(!['pack','pass'].includes(b.plan))fail('INVALID_INPUT');if(b.plan==='pass'&&active(a))fail('SUBSCRIPTION_EXISTS',409);
   const product=b.plan==='pack'?env.CREEM_PACK_PRODUCT_ID:env.CREEM_PASS_PRODUCT_ID;if(!product||!env.CREEM_WEBHOOK_SECRET||!env.CREEM_API_KEY)fail('PAYMENTS_UNAVAILABLE',503);
-  const purchase=crypto.randomUUID();await prepare(env.DB,'INSERT INTO billing_purchases(id,user_id,plan,product_id,created_at) VALUES(?,?,?,?,?)',purchase,user.id,b.plan,product,Date.now()).run();
-  const data=await creem(env,'/v1/checkouts',{product_id:product,request_id:purchase,customer:{email:user.email},metadata:{checkats_user_id:user.id,checkats_purchase_id:purchase},success_url:'https://checkats.online/account/?tab=points&checkout=return&lang='+(b.lang==='zh'?'zh':'en')});
-  if(!data.checkout_url||!data.id)fail('PAYMENTS_UNAVAILABLE',503);await prepare(env.DB,'UPDATE billing_purchases SET checkout_id=? WHERE id=?',data.id,purchase).run();return reply({url:data.checkout_url});
+  if(b.request_id!==undefined&&(typeof b.request_id!=='string'||! /^[a-f0-9-]{36}$/i.test(b.request_id)))fail('INVALID_INPUT');
+  const purchase=b.request_id||crypto.randomUUID();await prepare(env.DB,'INSERT OR IGNORE INTO billing_purchases(id,user_id,plan,product_id,created_at) VALUES(?,?,?,?,?)',purchase,user.id,b.plan,product,Date.now()).run();
+  const saved=await prepare(env.DB,'SELECT * FROM billing_purchases WHERE id=?',purchase).first();if(saved.user_id!==user.id||saved.plan!==b.plan||saved.product_id!==product)fail('CONFLICT',409);
+  const fulfilled=await prepare(env.DB,'SELECT order_id FROM billing_fulfillments WHERE purchase_id=?',purchase).first();if(fulfilled)fail('PURCHASE_COMPLETED',409);
+  const data=await creem(env,'/v1/checkouts',{product_id:product,request_id:purchase,customer:{email:user.email},metadata:{checkats_user_id:user.id,checkats_purchase_id:purchase},success_url:'https://checkats.online/account/?tab=points&checkout=return&purchase_id='+encodeURIComponent(purchase)+'&lang='+(b.lang==='zh'?'zh':'en')});
+  if(!data.id||(saved.checkout_id&&saved.checkout_id!==data.id))fail('PAYMENTS_UNAVAILABLE',503);const checkoutUrl=creemLink(data.checkout_url);await prepare(env.DB,'UPDATE billing_purchases SET checkout_id=? WHERE id=?',data.id,purchase).run();return reply({url:checkoutUrl,purchase_id:purchase});
  }
  async function webhook(request,env){
   if(request.method!=='POST')fail('METHOD_NOT_ALLOWED',405);if(!env.CREEM_WEBHOOK_SECRET)fail('PAYMENTS_UNAVAILABLE',503);
@@ -149,6 +165,7 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
   let event;try{event=JSON.parse(raw);}catch(_){fail('INVALID_INPUT');}if(!event.id||!event.object||typeof event.id!=='string')fail('INVALID_INPUT');await init(env.DB);
   const seen=await prepare(env.DB,'SELECT id FROM billing_webhooks WHERE id=?',event.id).first();if(seen)return reply({received:true,duplicate:true});
   const o=event.object,db=env.DB,now=Date.now(),type=event.eventType;
+  if(o.mode&&o.mode!==(env.CREEM_TEST_MODE==='true'?'test':'prod'))fail('INVALID_MODE');
   const customer=typeof o.customer==='string'?o.customer:o.customer?.id;
   if(type==='checkout.completed'||type==='subscription.paid'){
    const purchaseId=o.metadata?.checkats_purchase_id||o.request_id;let purchase=purchaseId?await prepare(db,'SELECT * FROM billing_purchases WHERE id=?',purchaseId).first():null;
@@ -157,22 +174,28 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
    const product=typeof o.product==='string'?o.product:o.product?.id;if(product!==purchase.product_id)fail('INVALID_PRODUCT');
    const expected=purchase.plan==='pack'?990:1990;
    if(type==='checkout.completed'){
+    if(purchase.checkout_id&&purchase.checkout_id!==o.id)fail('INVALID_ORDER');
     if(o.status!=='completed'||o.order?.status!=='paid'||o.order?.amount!==expected||String(o.order?.currency).toUpperCase()!=='USD')fail('INVALID_ORDER');
     if(purchase.plan==='pass'){
      const subId=typeof o.subscription==='string'?o.subscription:o.subscription?.id;if(!subId||!customer)fail('INVALID_ORDER');await prepare(db,'UPDATE billing_accounts SET subscription_id=?,customer_id=? WHERE user_id=? AND (subscription_id IS NULL OR subscription_id=?)',subId,customer,purchase.user_id,subId).run();
-    }else await grant(db,{id:o.order.id,user:purchase.user_id,plan:'pack',points:800,amount:990,customer,transaction:o.order.transaction_id||o.order.transaction?.id||null,now});
+    }else await grant(db,{id:o.order.id,user:purchase.user_id,plan:'pack',points:800,amount:990,customer,transaction:o.order.transaction_id||(typeof o.order.transaction==='string'?o.order.transaction:o.order.transaction?.id)||null,purchase:purchase.id,now});
    }else{
     if(purchase.plan!=='pass'||o.status!=='active'||o.product?.price!==1990||String(o.product?.currency).toUpperCase()!=='USD'||!o.last_transaction_id)fail('INVALID_ORDER');
     const end=Date.parse(o.current_period_end_date),start=Date.parse(o.current_period_start_date);if(!Number.isFinite(end)||!Number.isFinite(start)||end<=start)fail('INVALID_ORDER');
-    await grant(db,{id:'period:'+o.id+':'+start,user:purchase.user_id,plan:'pass',points:2000,amount:1990,customer,sub:o.id,end,start,transaction:o.last_transaction_id,now});
+    await grant(db,{id:'period:'+o.id+':'+start,user:purchase.user_id,plan:'pass',points:2000,amount:1990,customer,sub:o.id,end,start,transaction:o.last_transaction_id,purchase:purchase.id,now});
    }
   }else if(['subscription.canceled','subscription.scheduled_cancel','subscription.expired','subscription.paused','subscription.update'].includes(type)){
-   const a=await prepare(db,'SELECT * FROM billing_accounts WHERE subscription_id=?',o.id).first();if(a){const end=Date.parse(o.current_period_end_date);if(['subscription.canceled','subscription.scheduled_cancel'].includes(type))await prepare(db,"UPDATE billing_accounts SET subscription_status='scheduled_cancel' WHERE user_id=?",a.user_id).run();else if(type==='subscription.expired'||type==='subscription.paused'){if(!Number.isFinite(end)||end>=a.period_end)await prepare(db,"UPDATE billing_accounts SET subscription_status='expired',period_end=MIN(period_end,?) WHERE user_id=?",now,a.user_id).run();}}
+   const a=await prepare(db,'SELECT * FROM billing_accounts WHERE subscription_id=?',o.id).first();if(a){const end=Date.parse(o.current_period_end_date),status=type==='subscription.update'?o.status:type.slice('subscription.'.length);if(!Number.isFinite(end)||end>=a.period_end){if(status==='scheduled_cancel')await prepare(db,"UPDATE billing_accounts SET subscription_status='scheduled_cancel' WHERE user_id=? AND period_end>? AND subscription_status IN ('active','scheduled_cancel')",a.user_id,now).run();else if(['expired','paused','canceled'].includes(status))await prepare(db,"UPDATE billing_accounts SET subscription_status=?,period_end=MIN(period_end,?) WHERE user_id=?",status,now,a.user_id).run();}}
   }else if(type==='refund.created'||type==='dispute.created'){
    /* Retain an auditable event; fulfillment is stopped for this order. A refund
       needs manual reconciliation when points have already been spent. */
    const orderId=typeof o.order==='string'?o.order:o.order?.id;const transactionId=typeof o.transaction==='string'?o.transaction:o.transaction?.id||o.order?.transaction_id||null;
-   if(orderId||transactionId){const order=await prepare(db,'SELECT * FROM billing_orders WHERE id=? OR transaction_id=?',orderId||null,transactionId).first();if(!order)fail('UNKNOWN_ORDER',409);if(order&&order.status==='paid'){
+   if(orderId||transactionId){const order=await prepare(db,'SELECT * FROM billing_orders WHERE id=? OR transaction_id=?',orderId||null,transactionId).first();if(!order)fail('UNKNOWN_ORDER',409);
+    // A pending/failed refund must not revoke a paid product. Partial refunds need
+    // reconciliation; the full original grant cannot be removed for a small refund.
+    if(type==='refund.created'&&o.status&&o.status!=='succeeded')return reply({received:true});
+    if(type==='refund.created'&&o.transaction?.status==='partially_refunded'){await prepare(db,'INSERT OR IGNORE INTO billing_payment_reviews(event_id,order_id,reason,created_at) VALUES(?,?,?,?)',event.id,order.id,'partial_refund',now).run();await prepare(db,'INSERT OR IGNORE INTO billing_webhooks(id,created_at) VALUES(?,?)',event.id,now).run();return reply({received:true});}
+    if(order&&order.status==='paid'){
     const a=await prepare(db,'SELECT * FROM billing_accounts WHERE user_id=?',order.user_id).first(),amount=order.plan==='pass'&&(a.subscription_id!==order.subscription_id||a.period_end!==order.period_end)?0:Math.min(order.points,order.plan==='pack'?a.permanent_points:a.subscription_points);
     await db.batch([prepare(db,"UPDATE billing_orders SET status='refund_processing' WHERE id=? AND status='paid'",order.id),prepare(db,`UPDATE billing_accounts SET permanent_points=MAX(0,permanent_points-?),subscription_points=MAX(0,subscription_points-CASE WHEN period_end=? THEN ? ELSE 0 END) WHERE user_id=? AND EXISTS(SELECT 1 FROM billing_orders WHERE id=? AND status='refund_processing')`,order.plan==='pack'?amount:0,order.period_end,order.plan==='pass'?amount:0,order.user_id,order.id),prepare(db,`INSERT OR IGNORE INTO billing_ledger(id,user_id,kind,delta,permanent_delta,subscription_delta,created_at) VALUES(?,?,'refund',?,?,?,?)`,'refund:'+order.id,order.user_id,-amount,order.plan==='pack'?-amount:0,order.plan==='pass'?-amount:0,now),prepare(db,"UPDATE billing_orders SET status='refunded' WHERE id=? AND status='refund_processing'",order.id)]);
     await prepare(db,"UPDATE billing_accounts SET permanent_access=CASE WHEN EXISTS(SELECT 1 FROM billing_orders WHERE user_id=? AND plan='pack' AND status='paid') THEN 1 ELSE 0 END WHERE user_id=?",order.user_id,order.user_id).run();
@@ -187,6 +210,7 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
   if(g.plan==='pack')batch.push(prepare(db,`UPDATE billing_accounts SET permanent_points=permanent_points+?,permanent_access=1,customer_id=COALESCE(?,customer_id) WHERE user_id=? AND EXISTS(SELECT 1 FROM billing_orders WHERE id=? AND grant_state=0 AND status='paid')`,g.points,g.customer||null,g.user,g.id));
   else {batch.push(prepare(db,`INSERT OR IGNORE INTO billing_ledger(id,user_id,kind,delta,subscription_delta,created_at) SELECT ?,user_id,'expiration',-subscription_points,-subscription_points,? FROM billing_accounts WHERE user_id=? AND period_start<? AND subscription_points>0 AND EXISTS(SELECT 1 FROM billing_orders WHERE id=? AND grant_state=0)`,'rollover:'+g.id,g.now,g.user,g.start,g.id));batch.push(prepare(db,`UPDATE billing_accounts SET subscription_points=?,subscription_id=?,period_end=?,period_start=?,customer_id=?,subscription_status='active' WHERE user_id=? AND period_start<? AND EXISTS(SELECT 1 FROM billing_orders WHERE id=? AND grant_state=0 AND status='paid')`,g.end>Date.now()?g.points:0,g.sub,g.end,g.start,g.customer||null,g.user,g.start,g.id));}
   batch.push(prepare(db,`INSERT OR IGNORE INTO billing_ledger(id,user_id,kind,delta,permanent_delta,subscription_delta,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM billing_orders WHERE id=? AND grant_state=0 AND status='paid') AND (?='pack' OR EXISTS(SELECT 1 FROM billing_accounts WHERE user_id=? AND period_start=? AND subscription_id=?))`,'order:'+g.id,g.user,g.plan==='pack'?'pack':'subscription',g.plan==='pass'&&g.end<=Date.now()?0:g.points,g.plan==='pack'?g.points:0,g.plan==='pass'&&g.end>Date.now()?g.points:0,g.now,g.id,g.plan,g.user,g.start||0,g.sub||null),prepare(db,'UPDATE billing_orders SET grant_state=1 WHERE id=? AND grant_state=0',g.id));
+  if(g.purchase)batch.push(prepare(db,`INSERT OR IGNORE INTO billing_fulfillments(purchase_id,order_id) SELECT ?,id FROM billing_orders WHERE id=? AND user_id=? AND grant_state=1`,g.purchase,g.id,g.user));
   await db.batch(batch);
  }
  return {route,ai,snapshot,ensureAccount,reserve,settle,verifySignature,safeSnapshot,BASIC_TEMPLATES};

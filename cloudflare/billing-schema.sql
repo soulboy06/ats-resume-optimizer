@@ -25,3 +25,5 @@ CREATE INDEX IF NOT EXISTS saved_jobs_user ON saved_jobs(user_id,updated_at DESC
 CREATE TABLE IF NOT EXISTS billing_purchases (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,plan TEXT NOT NULL,product_id TEXT NOT NULL,checkout_id TEXT,created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS billing_orders (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,plan TEXT NOT NULL,points INTEGER NOT NULL,subscription_id TEXT,period_end INTEGER NOT NULL DEFAULT 0,period_start INTEGER NOT NULL DEFAULT 0,customer_id TEXT,amount INTEGER NOT NULL,currency TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,grant_state INTEGER NOT NULL DEFAULT 0,transaction_id TEXT);
 CREATE TABLE IF NOT EXISTS billing_webhooks (id TEXT PRIMARY KEY,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS billing_fulfillments (purchase_id TEXT NOT NULL,order_id TEXT NOT NULL,PRIMARY KEY(purchase_id,order_id));
+CREATE TABLE IF NOT EXISTS billing_payment_reviews (event_id TEXT PRIMARY KEY,order_id TEXT NOT NULL,reason TEXT NOT NULL,created_at INTEGER NOT NULL);

@@ -41,9 +41,9 @@ const DIMENSIONS = [
 // evidence 证据引用保持简历原文不动。
 function dimSystemPrompt(lang) {
 if (lang === "en") {
-return "You are a senior hiring manager. Score this resume on four dimensions (integer 0-100): 1) Writing strength: strong verbs, ownership; 2) Quantification & results: numbers, business impact, results-oriented; 3) Experience specificity: concrete details, context, verifiable, not empty claims; 4) Role alignment: relevance of the experience to the target job description. For each dimension give a one-sentence comment (in English, under 25 words) and one evidence quote (quote the resume verbatim, under 25 words; empty string if none found). End with a 2-3 sentence overall assessment: one sentence on the biggest strength, one on the biggest weakness, one with the single highest-priority improvement — be direct. Return ONLY JSON, no other text. Format: {\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"}],\"overall\":\"..\"}. The dimensions array order is fixed: writing strength, quantification & results, experience specificity, role alignment. Score anchors (pick the band first, then the exact score; be strict — most resumes land 55-75): 90+ = exceptional, top 1%; 75-89 = strong with only minor flaws; 60-74 = average with clear weaknesses; 40-59 = weak with multiple issues; below 40 = poor.";
+return "You are a senior hiring manager. Score this resume on four dimensions (integer 0-100): 1) Writing strength: strong verbs, ownership; 2) Quantification & results: numbers, business impact, results-oriented; 3) Experience specificity: concrete details, context, verifiable, not empty claims; 4) Role alignment: relevance of the experience to the target job description. For each dimension give a one-sentence comment (in English, under 25 words). End with a 2-3 sentence overall assessment: one sentence on the biggest strength, one on the biggest weakness, one with the single highest-priority improvement — be direct. Return ONLY JSON, no other text. Format: {\"dimensions\":[{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"}],\"overall\":\"..\"}. The dimensions array order is fixed: writing strength, quantification & results, experience specificity, role alignment. Score anchors (pick the band first, then the exact score; be strict — most resumes land 55-75): 90+ = exceptional, top 1%; 75-89 = strong with only minor flaws; 60-74 = average with clear weaknesses; 40-59 = weak with multiple issues; below 40 = poor.";
 }
-return "你是资深 HR。从四个维度给简历打分（0-100整数）：1)表达力度：是否用强动词、有ownership；2)量化与结果：数字、业务影响、结果导向；3)经历具体性：细节、上下文、可验证，不是空话；4)岗位匹配度：经历与目标岗位JD的相关性。每维度给一句话点评（中文，30字内）和一条原文证据（直接引用简历原话，不超过30字；实在找不到写空字符串）。最后2-3句话总评：亮点一句、最大短板一句、最优先改进建议一句，直接说结论。只返回 JSON，不要其他文字。格式：{\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"}],\"overall\":\"..\"}，dimensions 数组顺序固定为：表达力度、量化与结果、经历具体性、岗位匹配度。打分锚点（先定档位再给具体分数，严格一些，多数简历落在 55-75 分）：90+ 万里挑一；75-89 优秀，仅有小瑕疵；60-74 中等，有明显短板；40-59 较弱，多处硬伤；40以下 很差。";
+return "你是资深 HR。从四个维度给简历打分（0-100整数）：1)表达力度：是否用强动词、有ownership；2)量化与结果：数字、业务影响、结果导向；3)经历具体性：细节、上下文、可验证，不是空话；4)岗位匹配度：经历与目标岗位JD的相关性。每维度给一句话点评（中文，30字内）。最后2-3句话总评：亮点一句、最大短板一句、最优先改进建议一句，直接说结论。只返回 JSON，不要其他文字。格式：{\"dimensions\":[{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"},{\"score\":..,\"comment\":\"..\"}],\"overall\":\"..\"}，dimensions 数组顺序固定为：表达力度、量化与结果、经历具体性、岗位匹配度。打分锚点（先定档位再给具体分数，严格一些，多数简历落在 55-75 分）：90+ 万里挑一；75-89 优秀，仅有小瑕疵；60-74 中等，有明显短板；40-59 较弱，多处硬伤；40以下 很差。";
 }
 
 // Defense in depth: heuristics are only an early filter, not a proof that text is safe.
@@ -136,18 +136,24 @@ if (contactTokens(text).some(s => !allowed.has(s.replace(/[.,;:!?]+$/, '').toLow
 }
 function parseReviewOutput(text, resume, canary, env) {
 const p = parseAiJson(text);
-if (!exactKeys(p, ['dimensions','overall']) || !Array.isArray(p.dimensions) || p.dimensions.length !== 4 || typeof p.overall !== 'string' || !p.overall.trim() || p.overall.length > 1000) throw new Error('invalid review');
+// 顶层只要求有 dimensions 和 overall，允许模型带多余键（忽略不用）
+if (!p || typeof p !== 'object' || !Array.isArray(p.dimensions) || p.dimensions.length !== 4 || typeof p.overall !== 'string' || !p.overall.trim() || p.overall.length > 1000) throw new Error('invalid review');
+const dimensions = [];
 for (const d of p.dimensions) {
-if (!exactKeys(d, ['score','comment','evidence']) || !Number.isInteger(d.score) || d.score < 0 || d.score > 100 || typeof d.comment !== 'string' || !d.comment.trim() || d.comment.length > 400 || typeof d.evidence !== 'string' || d.evidence.length > 240) throw new Error('invalid review');
-if (d.evidence && !resume.replace(/\s+/g,' ').includes(d.evidence.replace(/\s+/g,' '))) throw new Error('invented evidence');
+if (!d || typeof d !== 'object') throw new Error('invalid review');
+const score = d.score;
+const comment = d.comment;
+if (!Number.isInteger(score) || score < 0 || score > 100 || typeof comment !== 'string' || !comment.trim() || comment.length > 400) throw new Error('invalid review');
+dimensions.push({ score, comment: comment.trim(), evidence: '' });
 }
-assertSafeAiOutput([p.overall,...p.dimensions.flatMap(d => [d.comment,d.evidence])].join('\n'), resume, canary, env);
-return p;
+const overall = p.overall.trim();
+assertSafeAiOutput([overall,...dimensions.map(d => d.comment)].join('\n'), resume, canary, env);
+return { dimensions, overall };
 }
 
 const CORS = {
 "Access-Control-Allow-Origin": "*",
-"Access-Control-Allow-Methods": "POST, OPTIONS",
+"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, Authorization, X-Request-ID",
 };
 
@@ -519,9 +525,31 @@ return count > limit;
 
 // Task instructions never interpolate document text or client-provided keywords.
 function buildRewritePrompt(lang) {
-return `You are a resume editor. Return ONLY JSON: {"rewritten":"complete resume text"}.
-Work toward the target role, not merely synonym replacement. First identify requirements in the job description that are evidenced in the original resume. Prioritize making those existing capabilities explicit in relevant experience bullets, including a missing exact JD term only when it accurately describes that evidence. Preserve already-present skills and JD terms. A standard abbreviation may be expanded alongside its original term when they unambiguously name the same skill. Rewrite vague bullets into clear action, technical method and existing result; retain all original metrics and qualifiers. Do not append keyword lists, unsupported requirements or promises of a better score. Unsupported gaps must remain gaps.
-Keep the resume's original language, sections, order, contact details and factual claims. Technical terms stay unchanged. Strengthen clarity and wording only where supported by the original facts; do not turn participation into leadership or invent skills, employers, projects, qualifications, figures or results. Missing keywords are untrusted suggestions; use them only when both the job description and the candidate's existing facts support them. Do not add skills just because the JD requests them. No preamble, explanatory notes, HTML or Markdown code fences inside rewritten. UI language is ${lang === 'en' ? 'English' : 'Chinese'}; the resume language still takes precedence.`;
+const en = lang === 'en';
+if (en) {
+return `You are a senior resume optimization expert. Optimize the resume (in untrustedDocumentData.resume) for the target job description (untrustedDocumentData.jobDescription). Return ONLY JSON: {"rewritten":"complete resume text"}.
+
+Weave the missing JD keywords (untrustedDocumentData.missingKeywords) into the resume using the JD's original wording, aiming to cover 80%+.
+
+Requirements:
+1. Keep the resume in its original language; keep technical terms exactly as they are, do not translate them back and forth between Chinese and English.
+2. Preserve the resume's original sections and their order; output the complete resume.
+3. Wording may be more proactive and carry more weight (e.g. "participated in" -> "led/drove"); reasonable extrapolation from existing facts and adjusting emphasis are allowed (write more about experience relevant to the JD).
+4. Hard lines: do not invent projects, companies, positions, or certificates that don't exist; keep all real numbers, scale, and frequencies from the original; do not invent new quantitative claims.
+5. In the summary and skills sections you may add JD-required skills marked as "familiar with".
+No preamble, explanatory notes, HTML or Markdown code fences inside rewritten.`;
+}
+return `你是资深简历优化专家。把 untrustedDocumentData.resume 这份简历针对目标岗位 JD（untrustedDocumentData.jobDescription）进行优化，只返回 JSON：{"rewritten":"完整简历正文"}。
+
+把缺失的 JD 关键词（untrustedDocumentData.missingKeywords）用 JD 原词措辞融入简历，目标覆盖 80%+。
+
+要求：
+1. 简历保持原文语言；技术术语保持原样，中英不要来回翻译。
+2. 保留简历原有板块和顺序；输出完整简历。
+3. 措辞可以更主动、更有分量（如"参与"→"主导/推动"）；允许基于事实合理外推、调整侧重（和 JD 相关的经历多写）。
+4. 红线：不得编造没有做过的项目、公司、职位、证书；保留原文所有真实数字、规模、频率，不得编造新的量化指标。
+5. 个人总结和技能栏可以用"熟悉/了解"补充 JD 要求的技能。
+不要任何前言、解释或 markdown 代码块标记。`;
 }
 
 // PDF rewrites keep a stable paragraph map. Headings and contact lines are
@@ -539,8 +567,9 @@ return blocks;
 }
 
 function buildPdfRewritePrompt(lang) {
-return `Rewrite the supplied RESUME BLOCKS for the target role. Return ONLY JSON: {"blocks":[{"id":"p1b1","text":"..."}]}.
-Include every input block exactly once in original order with the exact same id. No additional fields or prose. Keep non-editable blocks EXACTLY unchanged, including headings, names, dates and contacts. Preserve the original resume language and technical terms. Improve clarity without inventing skills, ownership, employment, projects, numbers or results; JD requirements are not candidate facts. Missing keywords are only suggestions and must be supported by the resume. Preserve bullet prefixes, do not add line breaks, and respect each block's maxChars budget. UI language: ${lang === 'en' ? 'English' : 'Chinese'}.`;
+return `Rewrite the resume paragraphs (untrustedDocumentData.pdfBlocks) for the target job (untrustedDocumentData.jobDescription), in the original language.
+Return ONLY JSON: {"blocks":[{"id":"p1b1","text":"..."}]}. Include every input block exactly once, in the original order, with the exact same id. No additional fields or prose.
+Keep every non-editable block EXACTLY unchanged, including headings, contact details, dates and names. Rewrite the editable blocks with more proactive, impactful wording (e.g. 'participated in' -> 'led/drove'); reasonable extrapolation from existing facts and adjusting emphasis are allowed - write more about experience relevant to the JD. Weave the missing JD keywords (untrustedDocumentData.missingKeywords) into editable blocks using the JD's original wording, aiming to cover 80%+. Stay within the approximate maxChars budget: each block must fit its original fixed PDF region, so keep rewrites concise. Do not insert extra sections or line breaks. Preserve existing facts, responsibilities, numbers and qualifications. Never invent skills, ownership, projects, employers or results. Preserve bullet prefixes.`;
 }
 
 function parsePdfRewrite(text, blocks) {
@@ -614,7 +643,7 @@ body: JSON.stringify({
 model,
 messages,
 response_format: {type:'json_object'},
-temperature: 0.2,
+temperature: 0.7,
 max_tokens: pdfBlocks ? 6000 : 4000,
 }),
 });
@@ -636,7 +665,16 @@ if (!exactKeys(parsed, ['rewritten']) || typeof parsed.rewritten !== 'string' ||
 assertSafeAiOutput(parsed.rewritten, resume, canary, env);
 const rewrittenContacts = new Set(contactTokens(parsed.rewritten).map(s => s.replace(/[.,;:!?]+$/, '').toLowerCase()));
 if (contactTokens(resume).some(s => !rewrittenContacts.has(s.replace(/[.,;:!?]+$/, '').toLowerCase()))) throw new Error('resume contact removed');
-return Response.json({ ok: true, rewritten: parsed.rewritten.trim(), model }, { headers: CORS });
+const rewritten = parsed.rewritten.trim();
+// 改写附带一次免费 AI 点评（不额外扣积分）：点评改写后的简历
+let freeReview = null;
+if (body.include_review === true) {
+try {
+const r = await doReview(env, rewritten, jd, lang);
+freeReview = { dimensions: r.dimensions, overall: r.overall, model: r.model };
+} catch (_) { /* 点评失败不影响改写结果 */ }
+}
+return Response.json({ ok: true, rewritten, model, review: freeReview }, { headers: CORS });
 } catch (e) {
 const raw = String((e && e.message) || e || "");
 const friendly = /deepseek 401/.test(raw)
@@ -728,6 +766,94 @@ return new Response('Not found',{status:404,headers:CORS});
 };
 
 function billingRuntime(){return createBilling({auth:getAuthUser,isAdmin:isAdminRequest,headers:CORS,validateAi:validateAiInput});}
+async function doReview(env,resume,jd,lang){
+const canary = 'checkats-guard-' + crypto.randomUUID();
+const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
+let dimParsed = null;
+let model = "";
+let lastErr = null;
+// 优先 SiliconFlow 免费 Qwen，失败回落 Workers AI
+try {
+const r = await runSiliconFlow(env, reviewMessages, 2048);
+model = r.model;
+dimParsed = parseReviewOutput(r.text, resume, canary, env);
+} catch (e) {
+lastErr = e;
+const msg = String((e && e.message) || e || '');
+if (msg === 'QUOTA_EXCEEDED') throw new Error(lang === "en" ? "Today's free AI quota is used up, please try again after 08:00 (Beijing time)" : "今日 AI 免费额度已用完，请明天 08:00 后再试");
+// 回落 Workers AI
+if (env.AI) {
+for (const m of TEXT_MODELS) {
+for (let attempt = 0; attempt < 2; attempt++) {
+try {
+const r = await runTextOne(env, m, reviewMessages, 2048, 0, 42 + attempt);
+model = r.model;
+dimParsed = parseReviewOutput(r.text, resume, canary, env);
+break;
+} catch (e2) {
+lastErr = e2;
+const msg2 = String((e2 && e2.message) || e2 || '');
+if (/daily free allocation|10,000 neurons|429|quota|rate.limit/i.test(msg2)) {
+throw new Error('QUOTA_EXCEEDED');
+}
+}
+}
+if (dimParsed) break;
+}
+}
+}
+if (lastErr && String((lastErr && lastErr.message) || '') === 'QUOTA_EXCEEDED') throw new Error(lang === "en" ? "Today's free AI quota is used up, please try again after 08:00 (Beijing time)" : "今日 AI 免费额度已用完，请明天 08:00 后再试");
+if (!dimParsed) throw new Error(lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试");
+const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
+const dimensions = DIMENSIONS.map((d, i) => {
+const it = dimItems[i] || {};
+return {
+key: d.key,
+name: d.name,
+score: it.score,
+comment: it.comment.trim(),
+evidence: it.evidence,
+};
+});
+return { dimensions, overall: dimParsed.overall.trim(), model };
+}
+
+async function runTextOne(env, model, messages, maxTokens = 1024, temperature, seed) {
+const params = { messages, max_tokens: maxTokens };
+if (typeof temperature === "number") params.temperature = temperature;
+if (typeof seed === "number") params.seed = seed;
+const out = await env.AI.run(model, params);
+const text = getText(out).trim();
+if (!text) throw new Error("empty response");
+return { text, model };
+}
+
+// SiliconFlow Qwen（免费）：OpenAI 兼容接口，优先于 Workers AI
+async function runSiliconFlow(env, messages, maxTokens = 1024) {
+const key = env.SILICONFLOW_API_KEY;
+if (!key) throw new Error("no siliconflow key");
+const body = {
+model: "Qwen/Qwen2.5-7B-Instruct",
+messages: messages,
+max_tokens: maxTokens,
+temperature: 0
+};
+const resp = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
+method: "POST",
+headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+body: JSON.stringify(body)
+});
+if (!resp.ok) {
+const t = await resp.text().catch(() => "");
+if (resp.status === 429 || resp.status === 402) throw new Error("QUOTA_EXCEEDED");
+throw new Error("siliconflow http " + resp.status + ": " + t.slice(0, 200));
+}
+const data = await resp.json();
+const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+if (!text) throw new Error("empty response");
+return { text, model: "Qwen/Qwen2.5-7B-Instruct (SiliconFlow)" };
+}
+
 async function handleReview(request,env){
 if (!env.AI) {
 return Response.json(
@@ -759,36 +885,7 @@ try {
 // ---- 调用 A：四个维度打分 + 总评（直接读全文，不依赖任何解析）----
 // 解析失败自动重试一次；两次都失败则明确报错，绝不返回 50 占位分。
 // （2026-10-11 教训：占位 50 会被前端当成真实分数展示，让用户误以为改写后变差）
-const canary = 'checkats-guard-' + crypto.randomUUID();
-const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
-let dimParsed = null;
-let model = "";
-for (let attempt = 0; attempt < 2; attempt++) {
-const r = await runText(env, reviewMessages, 2048, 0, 42 + attempt);
-model = r.model;
-try {
-dimParsed = parseReviewOutput(r.text, resume, canary, env);
-break;
-} catch (_) { /* Retry once with the same trusted rules; never recycle a model's output as instructions. */ }
-}
-if (!dimParsed) {
-return Response.json(
-{ ok: false, error: lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试" },
-{ status: 502, headers: CORS }
-);
-}
-const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
-const dimensions = DIMENSIONS.map((d, i) => {
-const it = dimItems[i] || {};
-return {
-key: d.key,
-name: d.name,
-score: it.score,
-comment: it.comment.trim(),
-evidence: it.evidence,
-};
-});
-const overall = dimParsed.overall.trim();
+const { dimensions, overall, model } = await doReview(env, resume, jd, lang);
 
 return Response.json(
 { ok: true, dimensions, overall, bullets: [], model},
@@ -797,6 +894,12 @@ return Response.json(
 } catch (e) {
 // Never return provider bodies or exception messages: they may echo source text or credentials.
 const raw = String((e && e.message) || '');
+if (/failed to produce valid scores|未能返回有效分数/.test(raw)) {
+return Response.json(
+{ ok: false, error: raw },
+{ status: 502, headers: CORS }
+);
+}
 const friendly = /deprecat/i.test(raw)
 ? (lang === 'en' ? 'Review model is temporarily unavailable' : '点评模型暂不可用，请稍后重试')
 : (lang === 'en' ? 'Review service could not validate the response; please retry' : '点评结果未通过校验，请稍后重试');

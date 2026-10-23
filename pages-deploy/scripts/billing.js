@@ -2,9 +2,10 @@
 (function(){
   'use strict';
   const ORIGIN='https://ats-hr-review.hhjgudhdjugudh878.workers.dev';
-  let account=null,revision=0,refreshPromise=null;
+  let account=null,accountAt=0,revision=0,refreshPromise=null;
+  const ACCOUNT_TTL=60000;
   const listeners=new Set();
-  const language=()=>new URLSearchParams(location.search).get('lang')==='zh'?'zh':'en';
+  const language=()=>{const q=new URLSearchParams(location.search).get('lang');if(q==='zh'||q==='en')return q;const h=document.documentElement.lang||'';return h.toLowerCase().startsWith('zh')?'zh':'en';};
   const words=(zh,en)=>language()==='zh'?zh:en;
   const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const link=(tab='plans')=>'/account/?tab='+tab+'&lang='+language();
@@ -23,11 +24,26 @@
     return data;
   }
   async function refresh(){
+    if(refreshPromise)return refreshPromise;
     const current=++revision,session=window.CheckATSAuth?.getSession();
-    if(!session){account=null;emit();return null;}
-    const promise=request('/api/billing/account');refreshPromise=promise;
-    try{const data=await promise;if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;emit();}return current===revision?data:null;}finally{if(refreshPromise===promise)refreshPromise=null;}
+    if(!session){account=null;accountAt=0;emit();return null;}
+    const promise=request('/api/billing/account').then(data=>{
+      if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;accountAt=Date.now();persistAccount();emit();}
+      return current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id?data:null;
+    });
+    refreshPromise=promise;
+    promise.catch(()=>{}).finally(()=>{if(refreshPromise===promise)refreshPromise=null;});
+    return promise;
   }
+  function cachedAccount(){
+    if(!window.CheckATSAuth?.getSession())return null;
+    if(account&&account.id===window.CheckATSAuth.getSession().user.id&&Date.now()-accountAt<=ACCOUNT_TTL)return account;
+    try{const s=JSON.parse(sessionStorage.getItem('checkats_account_cache')||'null');
+      if(s&&s.data&&Date.now()-s.ts<=ACCOUNT_TTL&&s.uid===window.CheckATSAuth.getSession().user.id){account=s.data;accountAt=s.ts;return account;}
+    }catch(_){}
+    return null;
+  }
+  function persistAccount(){try{if(account)sessionStorage.setItem('checkats_account_cache',JSON.stringify({data:account,ts:accountAt,uid:window.CheckATSAuth?.getSession()?.user?.id}));}catch(_){}}
   function modal(title,content,actions=[]){
     document.getElementById('billingDialog')?.close();document.getElementById('billingDialog')?.remove();
     const previous=document.activeElement,dialog=document.createElement('dialog');dialog.id='billingDialog';dialog.className='billing-dialog';dialog.setAttribute('aria-labelledby','billingDialogTitle');
@@ -41,7 +57,10 @@
   function plansDialog(title){modal(title,'<p>'+words('一次性购买 800 积分，或订阅每期获得 2,000 积分。','Buy 800 permanent points, or subscribe for 2,000 points per period.')+'</p>',[{label:words('查看套餐与权益','View plans'),run:()=>{location.href=link('plans');}}]);}
   async function requireAi(kind){
     if(!requireLogin())return false;
-    try{const a=await refresh();if(!a)return false;const cost=kind==='review'?10:20;if(a.points.total>=cost)return true;
+    const cost=kind==='review'?10:20;
+    const cached=cachedAccount();
+    if(cached&&cached.points.total>=cost){refresh().catch(()=>{});return true;}
+    try{const a=await refresh();if(!a)return false;if(a.points.total>=cost)return true;
       const actions=[];if(!a.checked_in)actions.push({label:words('签到领取 10 积分','Check in for 10 points'),run:async d=>{await checkin();d.close();}});
       actions.push({label:words('购买积分','Buy points'),secondary:!!actions.length,run:()=>{location.href=link();}});
       modal(words('积分不足','Not enough points'),'<p>'+words('本次需要 '+cost+' 积分，当前余额 '+a.points.total+' 积分。','This action costs '+cost+' points. Your balance is '+a.points.total+'.')+'</p>',actions);return false;
@@ -58,26 +77,38 @@
     else{const data=await response.clone().json().catch(()=>({}));if(data.code!=='BUSY')aiRequests.delete(fingerprint);}
     refresh().catch(()=>{});return response;
   }
-  async function checkout(plan){if(!requireLogin())return;let data;try{data=await request('/api/billing/checkout',{method:'POST',body:JSON.stringify({plan,lang:language()})});}catch(error){if(error.status===404)error.message=words('收款尚未开通，请稍后再来。','Payments are not available yet. Please check back later.');throw error;}const url=new URL(data.url);if(url.protocol!=='https:'||!/(^|\.)creem\.io$/.test(url.hostname))throw new Error(words('支付链接无效。','Invalid checkout link.'));location.assign(url.href);}
+  const checkoutAttempts=new Map();
+  async function checkout(plan){
+    if(!requireLogin())return;
+    const user=window.CheckATSAuth.getSession().user.id,key='checkats_checkout:'+user+':'+plan;
+    let attempt=checkoutAttempts.get(key);
+    if(!attempt){try{attempt=JSON.parse(sessionStorage.getItem(key));}catch(_){}}
+    if(!attempt||!Number.isFinite(attempt.created)||attempt.created<Date.now()-1800000||! /^[a-f0-9-]{36}$/i.test(attempt.id||''))attempt={id:crypto.randomUUID(),created:Date.now()};
+    checkoutAttempts.set(key,attempt);try{sessionStorage.setItem(key,JSON.stringify(attempt));}catch(_){}
+    let data;try{data=await request('/api/billing/checkout',{method:'POST',body:JSON.stringify({plan,lang:language(),request_id:attempt.id})});}catch(error){if(error.code==='PURCHASE_COMPLETED'){checkoutAttempts.delete(key);try{sessionStorage.removeItem(key);}catch(_){}error.message=words('这笔订单已完成，请到个人中心查看。','This purchase is complete. Check your account.');}if(error.status===404)error.message=words('收款尚未开通，请稍后再来。','Payments are not available yet. Please check back later.');throw error;}
+    const url=new URL(data.url);if(url.protocol!=='https:'||!/(^|\.)creem\.io$/.test(url.hostname))throw new Error(words('支付链接无效。','Invalid checkout link.'));
+    location.assign(url.href);
+  }
   async function portal(){const data=await request('/api/billing/portal',{method:'POST',body:'{}'});const url=new URL(data.url);if(url.protocol!=='https:'||!/(^|\.)creem\.io$/.test(url.hostname))throw new Error(words('管理链接无效。','Invalid billing link.'));location.assign(url.href);}
   function isBasicTemplate(id){return ['refined','minimal','compact','index','charter'].includes(id);}
   function templateAllowed(id){return isBasicTemplate(id)||!!account?.entitlements?.premium;}
   async function saveJob(snapshot,id,expectedUpdatedAt){
     if(!requireLogin())return null;
-    let a;try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return null;}
+    let a=cachedAccount();if(!a){try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return null;}}else refresh().catch(()=>{});
     if(!a?.entitlements?.premium){plansDialog(words('解锁岗位方案保存','Unlock saved job applications'));return null;}
-    return new Promise(resolve=>{let saved=false;const d=modal(words('为这份准备起个名字','Name this application'),'<form id="saveJobForm"><label>'+words('公司名称','Company')+'<input name="company" required maxlength="100" autocomplete="organization" value="'+escape(snapshot.company||'')+'"></label><label>'+words('岗位名称','Job title')+'<input name="role" required maxlength="120" value="'+escape(snapshot.role||'')+'"></label><p class="billing-muted">'+words('保存简历、JD、AI 结果与排版设置。','Save your resume, job description, AI results and layout settings.')+'</p></form>',[{label:words('保存岗位方案','Save application'),run:async dialog=>{const form=dialog.querySelector('form');if(!form.reportValidity())return;const payload={company:form.company.value.trim(),role:form.role.value.trim(),snapshot,...(expectedUpdatedAt?{expected_updated_at:expectedUpdatedAt}:{})};const result=await request('/api/jobs'+(id?'/'+encodeURIComponent(id):''),{method:id?'PUT':'POST',body:JSON.stringify(payload)});saved=true;dialog.close();resolve(result.job);}}]);d.addEventListener('close',()=>{if(!saved)resolve(null);},{once:true});d.querySelector('form').addEventListener('submit',event=>{event.preventDefault();d.querySelector('.billing-dialog-actions button').click();});});
+    return new Promise(resolve=>{let saved=false;const d=modal(words('为这份准备起个名字','Name this application'),'<form id="saveJobForm"><label>'+words('公司名称','Company')+'<input name="company" required maxlength="100" autocomplete="organization" value="'+escape(snapshot.company||'')+'"></label><label>'+words('岗位名称','Job title')+'<input name="role" required maxlength="120" value="'+escape(snapshot.role||'')+'"></label><p class="billing-muted">'+words('保存简历、JD、AI 结果与排版设置。','Save your resume, job description, AI results and layout settings.')+'</p></form>',[{label:words('保存岗位方案','Save application'),run:async dialog=>{const form=dialog.querySelector('form');if(!form.reportValidity())return;const payload={company:form.company.value.trim(),role:form.role.value.trim(),snapshot,...(expectedUpdatedAt?{expected_updated_at:expectedUpdatedAt}:{})};const result=await request('/api/jobs'+(id?'/'+encodeURIComponent(id):''),{method:id?'PUT':'POST',body:JSON.stringify(payload)});try{sessionStorage.removeItem('checkats_jobs_cache');}catch(_){}saved=true;dialog.close();resolve(result.job);}}]);d.addEventListener('close',()=>{if(!saved)resolve(null);},{once:true});d.querySelector('form').addEventListener('submit',event=>{event.preventDefault();d.querySelector('.billing-dialog-actions button').click();});});
   }
   async function authorizeExport(bytes,filename){
     if(!requireLogin())return false;
-    let a;try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return false;}
+    let a=cachedAccount();if(!a){try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return false;}}else refresh().catch(()=>{});
     if(!a?.entitlements?.premium){plansDialog(words('解锁 PDF 导出','Unlock PDF export'));return false;}
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=()=>request('/api/billing/export',{method:'POST',body:JSON.stringify({fingerprint:hash,filename})});
     const old=await request('/api/billing/export?fingerprint='+hash);if(old.authorized)return true;
     return new Promise(resolve=>{let accepted=false;const cost=a.entitlements.unlimited_export?0:10;const d=modal(words('导出这份简历','Export this resume'),'<p class="billing-file-name">'+escape(filename)+'</p><div class="billing-receipt"><p>'+words('本次消耗','Cost')+'<strong>'+cost+' '+words('积分','points')+'</strong></p><p>'+words('当前可用','Available')+'<strong>'+a.points.total+' '+words('积分','points')+'</strong></p></div><p class="billing-muted">'+words('同一文件下载重试不重复扣分。','Downloading the same file again does not cost more points.')+'</p>',[{label:cost?words('确认导出 · 10 积分','Export · 10 points'):words('导出 PDF · 通行证权益','Export PDF · Included'),run:async dialog=>{await attempt();accepted=true;dialog.close();refresh().catch(()=>{});resolve(true);}}]);d.addEventListener('close',()=>{if(!accepted)resolve(false);},{once:true});});
   }
-  window.CheckATSBilling={request,refresh,getAccount:()=>account,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},language,words,escape,link,modal,requireLogin,requireAi,plansDialog,checkin,checkout,portal,isBasicTemplate,templateAllowed,saveJob,authorizeExport,fetchAi};
-  window.CheckATSAuth?.onAuthStateChange(()=>refresh().catch(()=>{}));
+  window.CheckATSBilling={request,refresh,getAccount:()=>cachedAccount(),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},language,words,escape,link,modal,requireLogin,requireAi,plansDialog,checkin,checkout,portal,isBasicTemplate,templateAllowed,saveJob,authorizeExport,fetchAi};
+  window.CheckATSAuth?.onAuthStateChange(()=>{revision++;account=null;accountAt=0;refreshPromise=null;try{sessionStorage.removeItem('checkats_account_cache');}catch(_){}refresh().catch(()=>{});});
   window.addEventListener('storage',event=>{if(event.key==='checkats-auth-session')refresh().catch(()=>{});});
+  if(window.CheckATSAuth?.getSession())refresh().catch(()=>{});
 })();

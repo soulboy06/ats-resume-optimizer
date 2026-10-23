@@ -21,5 +21,7 @@ CREEM_TEST_MODE = "true"
 # Set CREEM_API_KEY / CREEM_WEBHOOK_SECRET as Worker secrets, never frontend values.
 # Retain existing DEEPSEEK_API_KEY / RESEND_API_KEY / ADMIN_PASS Worker secrets.
 # Register /api/billing/webhook for checkout.completed, subscription.paid,
-# subscription.scheduled_cancel, subscription.expired, refund.created, dispute.created.
+# subscription.scheduled_cancel, subscription.canceled, subscription.expired,
+# subscription.paused, subscription.update, refund.created, dispute.created.
 # The subscription product's billing period must match its displayed billing terms.
+# Setup and sandbox checklist: ../docs/creem-payments.md

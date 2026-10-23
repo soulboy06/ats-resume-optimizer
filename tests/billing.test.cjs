@@ -6,15 +6,15 @@ class D1 {
  prepare(sql){const db=this;return {values:[],bind(...values){this.values=values;return this;},exec(){const statement=db.sqlite.prepare(sql);if(/^\s*(SELECT|PRAGMA)/i.test(sql))return {results:statement.all(...this.values),meta:{changes:0}};const r=statement.run(...this.values);return {meta:{changes:Number(r.changes)}};},async run(){await db.queue;return this.exec();},async all(){await db.queue;return this.exec();},async first(){await db.queue;return this.exec().results[0]||null;}};}
  batch(statements){const pending=this.queue.then(()=>{this.sqlite.exec('BEGIN');try{const out=statements.map(s=>s.exec());this.sqlite.exec('COMMIT');return out;}catch(e){this.sqlite.exec('ROLLBACK');throw e;}});this.queue=pending.catch(()=>{});return pending;}
 }
-function setup(){let clock=Date.UTC(2026,9,23,6);class Clock extends Date{constructor(...args){super(...(args.length?args:[clock]));}static now(){return clock;}}
+function setup(){let provider=null;let clock=Date.UTC(2026,9,23,6);class Clock extends Date{constructor(...args){super(...(args.length?args:[clock]));}static now(){return clock;}}
  const db=new D1(),env={DB:db,CREEM_WEBHOOK_SECRET:'synthetic-webhook-secret',CREEM_PACK_PRODUCT_ID:'prod_pack',CREEM_PASS_PRODUCT_ID:'prod_pass'};
- const ctx=vm.createContext({Response,Request,Headers,URL,TextDecoder,TextEncoder,crypto:webcrypto,Date:Clock,fetch:async()=>{throw Error('Unexpected provider call');}});vm.runInContext(source+'\nthis.createBilling=createBilling',ctx);
+ const ctx=vm.createContext({Response,Request,Headers,URL,TextDecoder,TextEncoder,crypto:webcrypto,Date:Clock,AbortController,setTimeout,clearTimeout,fetch:async(...args)=>{if(provider)return provider(...args);throw Error('Unexpected provider call');}});vm.runInContext(source+'\nthis.createBilling=createBilling',ctx);
  const service=ctx.createBilling({auth:async r=>{const token=r.headers.get('Authorization');return token==='Bearer alice'?{id:'alice',email:'alice@example.test'}:token==='Bearer bob'?{id:'bob',email:'bob@example.test'}:null;},isAdmin:()=>false,headers:{},validateAi:b=>{if(typeof b.resume!=='string')throw Error('invalid');}});
  async function route(path,method='GET',body,user='alice'){const response=await service.route(new Request('https://test.local'+path,{method,headers:{...(user?{Authorization:'Bearer '+user}:{}),'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})}),env);return {status:response.status,data:await response.json()};}
  async function ai(key='request-1',kind='review',success=true,user='alice',body={resume:'A real resume'}){let called=0;const response=await service.ai(new Request('https://test.local/api/'+kind,{method:'POST',headers:{Authorization:'Bearer '+user,'Content-Type':'application/json','X-Request-ID':key},body:JSON.stringify(body)}),env,kind,async()=>{called++;return Response.json({ok:success,result:'synthetic result'},{status:success?200:502});});return {status:response.status,data:await response.json(),called};}
  async function sql(q,...v){return db.prepare(q).bind(...v).run();}
  async function hook(event,signature){const raw=JSON.stringify(event),sig=signature||createHmac('sha256',env.CREEM_WEBHOOK_SECRET).update(raw).digest('hex');const response=await service.route(new Request('https://test.local/api/billing/webhook',{method:'POST',headers:{'creem-signature':sig},body:raw}),env);return {status:response.status,data:await response.json()};}
- return {db,env,service,route,ai,sql,hook,advance:ms=>clock+=ms,now:()=>clock};
+ return {db,env,service,route,ai,sql,hook,setProvider:fn=>provider=fn,advance:ms=>clock+=ms,now:()=>clock};
 }
 const job={company:'Google',role:'Frontend engineer',snapshot:{resume:'Alex\nExperience: six years',jd:'React engineer',rewritten:'Alex\nBuilt React services',studio:{data:{name:'Alex',experience:'Built services'},template:'refined',photo:null}}};
 async function paid(app){await app.route('/api/billing/account');await app.sql('UPDATE billing_accounts SET permanent_access=1 WHERE user_id=?','alice');}
@@ -54,4 +54,57 @@ test('real worker routes reject anonymous AI, while valid ES256 and RS256 issuer
   const valid=await token('https://auth.example.test/auth/v1');const response=await context.worker.fetch(new Request('https://worker.test/api/billing/account',{headers:{Authorization:'Bearer '+valid}}),env);assert.equal(response.status,200);assert.equal((await response.json()).points.total,50);
   const bad=await token('https://auth.example.test.attacker.test/auth/v1');assert.equal((await context.worker.fetch(new Request('https://worker.test/api/billing/account',{headers:{Authorization:'Bearer '+bad}}),env)).status,401);
  }
+});
+
+
+test('checkout retries reuse one purchase and trusted server prices, with owned status tracking',async()=>{
+ const a=setup();a.env.CREEM_API_KEY='synthetic-api-key';a.env.CREEM_TEST_MODE='true';const requests=[];
+ a.setProvider(async(url,options)=>{requests.push({url,body:JSON.parse(options.body),headers:options.headers});return Response.json({id:'ch_test',checkout_url:'https://checkout.creem.io/test'});});
+ const request_id=webcrypto.randomUUID();for(let n=0;n<2;n++)assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id,lang:'zh',price:1,user_id:'bob'})).status,200);
+ assert.equal((await a.db.prepare('SELECT COUNT(*) AS n FROM billing_purchases').first()).n,1);
+ assert.equal(requests[0].url,'https://test-api.creem.io/v1/checkouts');assert.equal(requests[0].body.request_id,request_id);assert.equal(requests[1].body.request_id,request_id);
+ assert.equal(requests[0].body.product_id,'prod_pack');assert.equal(requests[0].body.metadata.checkats_user_id,'alice');assert.ok(requests[0].body.success_url.includes('purchase_id='+request_id));
+ const status='/api/billing/checkout/status?purchase_id='+request_id;assert.equal((await a.route(status)).data.status,'pending');assert.equal((await a.route(status,'GET',undefined,'bob')).status,404);
+ assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id},'bob')).status,409);
+ const event=packEvent(a);event.object.id='ch_test';event.object.request_id=request_id;event.object.metadata.checkats_purchase_id=request_id;await a.hook(event);
+ assert.equal((await a.route(status)).data.status,'fulfilled');assert.equal((await a.route('/api/billing/account')).data.points.total,850);
+ assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id})).data.code,'PURCHASE_COMPLETED');
+});
+test('provider errors preserve the purchase id; invalid checkout URLs never reach the browser',async()=>{
+ const a=setup();a.env.CREEM_API_KEY='synthetic-api-key';const request_id=webcrypto.randomUUID();let calls=0;
+ a.setProvider(async()=>{if(++calls===1)throw Error('network lost');return Response.json({id:'ch_retry',checkout_url:'https://creem.io.evil.test/checkout'});});
+ assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id})).status,503);
+ assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id})).status,503);
+ assert.equal((await a.db.prepare('SELECT COUNT(*) AS n FROM billing_purchases').first()).n,1);
+ a.setProvider(async()=>Response.json({id:'ch_retry',checkout_url:'https://www.creem.io/payment/test'}));assert.equal((await a.route('/api/billing/checkout','POST',{plan:'pack',request_id})).status,200);
+});
+test('purchase status cannot mistake another recent payment or a signup reward for fulfillment',async()=>{
+ const a=setup();await pending(a);await a.sql('INSERT INTO billing_purchases(id,user_id,plan,product_id,created_at) VALUES(?,?,?,?,?)','purchase-b','alice','pack','prod_pack',a.now());await a.hook(packEvent(a));
+ assert.equal((await a.route('/api/billing/checkout/status?purchase_id=purchase-b')).data.status,'pending');
+ assert.equal((await a.route('/api/billing/checkout/status?purchase_id=purchase-a')).data.status,'fulfilled');
+ await a.hook({id:'refund-status',eventType:'refund.created',object:{order:'ord-pack'}});
+ assert.equal((await a.route('/api/billing/checkout/status?purchase_id=purchase-a')).data.status,'refunded');
+});
+test('subscription fulfillment waits for paid, including webhook delivery before checkout completed',async()=>{
+ const a=setup();await pending(a,'pass');const checkout=packEvent(a);checkout.object.product='prod_pass';checkout.object.order.amount=1990;checkout.object.subscription='sub_a';
+ await a.hook(checkout);assert.equal((await a.route('/api/billing/checkout/status?purchase_id=purchase-a')).data.status,'pending');
+ await a.hook(subEvent(a));assert.equal((await a.route('/api/billing/checkout/status?purchase_id=purchase-a')).data.status,'fulfilled');
+ const b=setup();await pending(b,'pass');await b.hook(subEvent(b));await b.hook(checkout);assert.equal((await b.route('/api/billing/account')).data.points.total,2050);
+});
+test('a test-mode event cannot fulfill a production purchase, and checkout IDs must match',async()=>{
+ const a=setup();await pending(a);const event=packEvent(a);event.object.mode='test';assert.equal((await a.hook(event)).data.code,'INVALID_MODE');delete event.object.mode;
+ await a.sql("UPDATE billing_purchases SET checkout_id='ch_expected' WHERE id='purchase-a'");event.object.id='ch_other';assert.equal((await a.hook(event)).data.code,'INVALID_ORDER');
+ assert.equal((await a.route('/api/billing/account')).data.points.total,50);
+});
+test('official string transaction IDs support refunds; failed and partial refunds never revoke the entire pack',async()=>{
+ const a=setup();await pending(a);const event=packEvent(a);event.object.order.transaction='tran_pack';await a.hook(event);
+ await a.hook({id:'failed-refund',eventType:'refund.created',object:{status:'failed',transaction:'tran_pack'}});assert.equal((await a.route('/api/billing/account')).data.points.total,850);
+ await a.hook({id:'partial-refund',eventType:'refund.created',object:{status:'succeeded',refund_amount:100,transaction:{id:'tran_pack',status:'partially_refunded'}}});assert.equal((await a.route('/api/billing/account')).data.entitlements.permanent,true);
+ assert.equal((await a.db.prepare('SELECT reason FROM billing_payment_reviews').first()).reason,'partial_refund');
+ await a.hook({id:'full-refund',eventType:'refund.created',object:{status:'succeeded',transaction:{id:'tran_pack',status:'refunded'}}});assert.equal((await a.route('/api/billing/account')).data.points.total,50);
+});
+test('scheduled cancellation through update preserves paid access, immediate cancellation stops it',async()=>{
+ const a=setup();await pending(a,'pass');await a.hook(subEvent(a));
+ await a.hook({id:'schedule-update',eventType:'subscription.update',object:{id:'sub_a',status:'scheduled_cancel'}});assert.equal((await a.route('/api/billing/account')).data.entitlements.subscription,true);
+ await a.hook({id:'cancel-immediate',eventType:'subscription.canceled',object:{id:'sub_a'}});assert.equal((await a.route('/api/billing/account')).data.entitlements.subscription,false);
 });

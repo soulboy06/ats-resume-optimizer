@@ -73,7 +73,7 @@
 }
   </script>
   <link rel="stylesheet" href="/styles/components.css" />
-  <link rel="stylesheet" href="/styles/design.css" /><link rel="stylesheet" href="/styles/billing.css?v=20261023-rewrite" />
+  <link rel="stylesheet" href="/styles/design.css" /><link rel="stylesheet" href="/styles/billing.css?v=20261023-profile3" />
 </head>
 <body>
 <header class="nav-shell"><nav class="nav product-nav" aria-label="Main navigation">
@@ -211,7 +211,7 @@
         <details><summary data-i18n="faqTwoQ">Is this the same score every ATS uses?</summary><p data-i18n="faqTwoA">No. There is no universal ATS score. This directional simulation combines exact words from this job description with four raw-text parseability checks; the separate HR lens comes from the AI review.</p></details>
         <details><summary data-i18n="faqThreeQ">Does the demo use AI?</summary><p data-i18n="faqThreeA">Yes. AI Deep Review uses a small model through Cloudflare Workers AI, and AI Rewrite uses DeepSeek through the same server-side Worker. No API key is entered in the browser.</p></details>
         <details><summary data-i18n="faqFourQ">Can it read a PDF?</summary><p data-i18n="faqFourA">Yes. Choose a text-based PDF and the demo will extract its text in your browser. Image-only scanned PDFs require OCR, which is not included here.</p></details>
-        <details><summary data-i18n="faqQuotaQ">Is CheckATS free, and do I need an account?</summary><p data-i18n="faqQuotaA">Basic ATS checks are free without an account. AI requires login: 10 points per review, 20 per rewrite. Email verification earns 50 permanent points, and daily check-in earns 10. PDF export requires a paid purchase.</p></details>
+        <details><summary data-i18n="faqQuotaQ">Is CheckATS free, and do I need an account?</summary><p data-i18n="faqQuotaA">Basic ATS checks are free without an account. AI requires login: 10 points per review, 20 per rewrite (includes a free review of the rewritten resume). Email verification earns 50 permanent points, and daily check-in earns 10. PDF export requires a paid purchase.</p></details>
       </div>
     </section>
   </main>
@@ -260,7 +260,7 @@
   </script>
   <script src="/scripts/pdf-engine.js"></script>
   <script src="/scripts/auth.js"></script>
-  <script src="/scripts/billing.js?v=20261023-account-service"></script>
+  <script src="/scripts/billing.js?v=20261023-creem-sync"></script>
   <script src="/scripts/auth-ui.js?v=20261023-profile3"></script>
   <script src="/scripts/pdf-import.js"></script>
   <script>
@@ -463,6 +463,34 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       var aiComparison = null;
       var aiReviewComparison = null;
 
+      // ---- 本地缓存：刷新不丢输入框和 AI 结果 ----
+      var persistTimer=null;
+      function persistState(){
+        clearTimeout(persistTimer);
+        persistTimer=setTimeout(function(){
+          try{
+            localStorage.setItem('checkats_analyzer_cache',JSON.stringify({
+              resume:resumeEl.value,jd:jobEl.value,review:latestHrReview,
+              aiOutput:latestAiOutput,aiOriginal:latestAiOriginal,ts:Date.now()
+            }));
+          }catch(e){}
+        },800);
+      }
+      function restoreState(){
+        try{
+          var c=JSON.parse(localStorage.getItem('checkats_analyzer_cache')||'null');
+          if(!c||typeof c.resume!=='string'||!c.resume.trim())return false;
+          if(Date.now()-(c.ts||0)>7*864e5)return false;
+          resumeEl.value=c.resume;jobEl.value=c.jd||'';
+          latestHrReview=c.review||null;
+          latestAiOutput=c.aiOutput||'';
+          latestAiOriginal=c.aiOriginal||'';
+          updateCounts();
+          return true;
+        }catch(e){return false;}
+      }
+      function clearPersist(){try{localStorage.removeItem('checkats_analyzer_cache');}catch(e){}}
+
       var i18n = {
         en: {
           resourcesTitle:"Resume guides and scoring details",
@@ -471,7 +499,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           methodLink:"How CheckATS scores resumes and handles data",
           allGuidesLink:"Browse resume guides",
           faqQuotaQ:"Is CheckATS free, and do I need an account?",
-          faqQuotaA:"Basic ATS checks are free without an account. AI requires login: 10 points per review, 20 per rewrite. Email verification earns 50 permanent points, and daily check-in earns 10. PDF export requires a paid purchase.",
+          faqQuotaA:"Basic ATS checks are free without an account. AI requires login: 10 points per review, 20 per rewrite (includes a free review of the rewritten resume). Email verification earns 50 permanent points, and daily check-in earns 10. PDF export requires a paid purchase.",
 
           previewKeywords:'Keyword alignment', previewParsing:'Text parseability', heroCapabilitiesAria:'What you can do', heroFeatureOne:'Find keyword gaps', heroFeatureTwo:'Get an AI review', heroFeatureThree:'Refine your story', heroLocal:'Free to use · No account needed', previewTitle:'A little more aligned.', previewCopy:'Small changes. A stronger first impression.', previewExample:'Example score', resumeHint:'Paste text or import a text-based PDF', jobHint:'The more specific the role, the better the match', reportTitle:'A clearer next step.', reportCopy:'See where you align, and where a few thoughtful changes can help.', editMaterials:'Edit documents', parseMetricNote:'Four checks of your plain text', parseChecksTitle:'A clean, readable resume.', keywordDetailsTitle:'The words that connect you.', keywordDictNote:'Skill keywords come from a 35,000+ cross-occupation skills dictionary; generic filler words are excluded.',
           title:'Free ATS Resume Checker & JD Matcher | CheckATS', navAria:'Main navigation', homeAria:'CheckATS home', languageAria:'Language',
@@ -499,7 +527,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           matchedKeywords:'Matched JD words', missingKeywords:'Missing JD words', matchedCount:'Hit {matched} / {total}', noGaps:'All selected JD words already appear in the resume.', noMatches:'No selected JD words appear in the resume yet.',
           suggestionsTitle:'Bullet-by-bullet suggestions', topFixes:'Top {count} fixes', optimizedDraft:'Optimized draft', draftCaption:'Safe verb upgrades highlighted',
           improveTitle:'Turn feedback into a stronger score', improveCopy:'Open the complete resume below, make targeted edits, then re-check JD exact-word coverage. Run AI review again only when you want a fresh HR read.', improveButton:'Enter improve mode', improveEditorTitle:'Improve editor', collapseEditor:'Collapse', editorLabel:'Complete resume text',  reanalyze:'Re-analyze',   originalScore:'Before', newScore:'After', pointsGained:'+{count} pts', pointsChanged:'{count} pts', keywordCoverage:'JD exact-word coverage', keywordsGained:'+{count} matched', keywordsChanged:'{count} matched', scoreDroppedHint:'Score dropped — the rewrite may have lost keywords. Compare it with the missing-keyword list.', scanLabel:'Scan {count}: {score}', exportTitle:'Export your latest version', exportCopy:'Download an ATS-friendly plain-text file or copy the current optimized resume.', downloadResume:'Download optimized resume', saveAsPdf:'Save as PDF', pdfHandoffFailed:'Browser storage is unavailable. Copy your rewrite, then paste it in the PDF studio.', copyResume:'Copy to clipboard', copiedResume:'Optimized resume copied to your clipboard.', copyFailed:'Copy failed. Select the edited resume text and copy it manually.', gatePlaceholder:'you@example.com', gateInvalid:'Enter a valid email address.', sendEmailPrivacy:'Used only for this delivery and discarded immediately.',
-          aiTitle:'AI Rewrite — DeepSeek', aiBeta:'BETA', aiIntro:'Create a complete, role-specific resume. ATS exact-word coverage is recalculated after rewriting; a fresh AI review is a separate action.', rulePath:'Quick rule-based polish', rulePathCopy:'Instant, local verb and keyword-review fixes in the editor above.', aiPath:'AI rewrite', aiPathCopy:'The Worker securely calls DeepSeek with the resume, job description, and up to 40 missing exact JD words.', privacyNote:'Only when you click “Rewrite with AI” are the resume, job description, and missing keywords sent to the Cloudflare Worker. The DeepSeek key stays on the server and is never sent to the browser.', rewriteAi:'Rewrite with AI', rewritingAi:'AI is rewriting. Please wait (about 30–60 seconds)', aiOutputTitle:'AI rewritten resume', aiCopy:'Copy', aiCopied:'AI rewrite copied to your clipboard.', sendEmail:'Send to email', sendingEmail:'Sending…', sendEmailTitle:'Email this optimized resume', sendEmailCopy:'Enter the email address that should receive the TXT attachment.', sendEmailSubmit:'Send resume', sendEmailSuccess:'Sent — check your inbox', sendEmailFailed:'Email could not be sent. Please try again.', aiCoverageUnchanged:'Exact-word coverage did not increase. Wording may have changed, but this rewrite has not demonstrated better keyword coverage. Only add missing skills when you can support them with real experience.', aiCoverageLower:'Exact-word coverage decreased. Review the lost terms before using this version.', aiCoverageGained:'Exact-word coverage increased. Confirm that every added term is supported by your experience.', rewriteGained:'New matches', rewriteLost:'Lost matches', rewriteRemaining:'Still missing', rewriteNoTerms:'None', aiAutoScored:'ATS exact-word coverage was recalculated and the rewrite synced to the editor. A fresh AI review requires a separate click (10 points).', aiIncomplete:'AI output seems incomplete. Please retry before it is scored or synced to the editor.', aiRewriteLimit:'Today’s rewrite quota is used up.', aiRewriteConfig:'The rewrite service is being configured. Please try again later.', aiHttpError:'Rewrite failed (HTTP {status}). {detail}', aiNetwork:'Network connection failed. Check your network and try again.', aiUnparseable:'The rewrite service returned an unreadable response. Please try again.', technicalDetails:'Show technical details', technicalStatus:'HTTP status', technicalBody:'Raw response body', noResponse:'No response', noBody:'(empty)', fetchError:'Fetch error', diffTitle:'Rewrite comparison', diffOriginal:'Original', diffRewritten:'Rewritten', diffNote:'Green text is AI-rewritten or amplified wording. It may come up in interviews—confirm every change.', reviewNotRequested:'The previous review assessed the original resume. The rewritten version has not been reviewed; previous scores are kept for reference.', reviewOriginalDetails:'Read the original resume review', reviewNewVersion:'Review rewritten version · 10 points', reviewCompareTitle:'AI review before and after', reviewBeforeUnavailable:'Not reviewed', reviewRefreshLoading:'AI is reviewing the rewritten resume…', reviewRefreshFailed:'AI re-review failed. Your previous scores are kept below; use Retry to try again.', reviewRefreshLimit:'Today’s free review quota is used up. Your previous scores are kept below.', reviewRefreshRetry:'Retry AI re-review',
+          aiTitle:'AI Rewrite — DeepSeek', aiBeta:'BETA', aiIntro:'Create a complete, role-specific resume. After rewriting, ATS and AI scores refresh automatically and every change is highlighted for review.', rulePath:'Quick rule-based polish', rulePathCopy:'Instant, local verb and keyword-review fixes in the editor above.', aiPath:'AI rewrite', aiPathCopy:'The Worker securely calls DeepSeek with the resume, job description, and up to 40 missing exact JD words.', privacyNote:'Only when you click “Rewrite with AI” are the resume, job description, and missing keywords sent to the Cloudflare Worker. The DeepSeek key stays on the server and is never sent to the browser.', rewriteAi:'Rewrite with AI · free review included', rewritingAi:'AI is rewriting. Please wait (about 30–60 seconds)', aiOutputTitle:'AI rewritten resume', aiCopy:'Copy', aiCopied:'AI rewrite copied to your clipboard.', sendEmail:'Send to email', sendingEmail:'Sending…', sendEmailTitle:'Email this optimized resume', sendEmailCopy:'Enter the email address that should receive the TXT attachment.', sendEmailSubmit:'Send resume', sendEmailSuccess:'Sent — check your inbox', sendEmailFailed:'Email could not be sent. Please try again.', aiAutoScored:'ATS exact-word coverage refreshed and the rewritten resume synced to the editor. AI re-review status appears below.', aiIncomplete:'AI output seems incomplete. Please retry before it is scored or synced to the editor.', aiRewriteLimit:'Today’s rewrite quota is used up.', aiRewriteConfig:'The rewrite service is being configured. Please try again later.', aiHttpError:'Rewrite failed (HTTP {status}). {detail}', aiNetwork:'Network connection failed. Check your network and try again.', aiUnparseable:'The rewrite service returned an unreadable response. Please try again.', technicalDetails:'Show technical details', technicalStatus:'HTTP status', technicalBody:'Raw response body', noResponse:'No response', noBody:'(empty)', fetchError:'Fetch error', diffTitle:'Rewrite comparison', diffOriginal:'Original', diffRewritten:'Rewritten', diffNote:'Green text is AI-rewritten or amplified wording. It may come up in interviews—confirm every change.', reviewCompareTitle:'AI review before and after', reviewBeforeUnavailable:'Not reviewed', reviewRefreshLoading:'AI is reviewing the rewritten resume…', reviewRefreshFailed:'AI re-review failed. Your previous scores are kept below; use Retry to try again.', reviewRefreshLimit:'Today’s free review quota is used up. Your previous scores are kept below.', reviewRefreshRetry:'Retry AI re-review',
           weakResponsible:'“Responsible for” weakens bullet {bullet}', weakResponsibleTip:'Lead with ownership: Led, Owned, or Delivered.', weakHelped:'“Helped” weakens bullet {bullet}', weakHelpedTip:'Name your direct contribution: Built, Resolved, or Improved.', weakWorked:'“Worked on” weakens bullet {bullet}', weakWorkedTip:'Use a concrete verb: Developed, Shipped, or Optimized.', weakParticipated:'“Participated in” weakens bullet {bullet}', weakParticipatedTip:'Clarify your role: Coordinated, Led, or Resolved.', weakAssisted:'“Assisted” weakens bullet {bullet}', weakAssistedTip:'State the outcome you personally delivered.', noMetric:'Bullet {bullet} has no measurable result', noMetricTip:'Add scale, speed, reliability, adoption, cost, or time saved if you can verify it.', strongBullets:'Strong bullet construction', strongBulletsTip:'Your bullets use direct verbs and include measurable evidence.',
           sectionSummary:'Summary', sectionExperience:'Experience', sectionEducation:'Education', sectionSkills:'Skills'
         },
@@ -510,7 +538,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           methodLink:"CheckATS 评分方法与数据处理说明",
           allGuidesLink:"浏览简历指南",
           faqQuotaQ:"CheckATS 免费吗？需要注册吗？",
-          faqQuotaA:"普通 ATS 检测无需登录且免费。AI 点评每次 10 积分，改写每次 20 积分；验证邮箱送 50 分，每日签到领 10 分。PDF 导出需购买付费套餐。",
+          faqQuotaA:"普通 ATS 检测无需登录且免费。AI 点评每次 10 积分，改写每次 20 积分（含一次改写后免费点评）；验证邮箱送 50 分，每日签到领 10 分。PDF 导出需购买付费套餐。",
 
           previewKeywords:'岗位关键词匹配', previewParsing:'文本可解析性', heroCapabilitiesAria:'你可以获得的帮助', heroFeatureOne:'发现关键词缺口', heroFeatureTwo:'获得 AI 深度点评', heroFeatureThree:'优化经历表达', heroLocal:'免费使用 · 无需注册', previewTitle:'离心仪岗位，再近一点', previewCopy:'一点调整，让好经历更有说服力。', previewExample:'示例评分', resumeHint:'支持粘贴文本或导入文字版 PDF', jobHint:'职位描述越具体，匹配建议越准确', reportTitle:'看见你的下一步。', reportCopy:'找到已经契合的优势，也找到值得调整的地方。', editMaterials:'修改材料', parseMetricNote:'基于纯文本的四项基础检查', parseChecksTitle:'让简历更容易被读取', keywordDetailsTitle:'让经历与岗位连接的词。', keywordDictNote:'技能关键词来自 35,000+ 全职业技能词典，通用虚词已排除。',
           title:'Free ATS Resume Checker & JD Matcher | CheckATS', navAria:'主导航', homeAria:'CheckATS 首页', languageAria:'语言选择',
@@ -537,7 +565,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           matchedKeywords:'已命中的 JD 原词', missingKeywords:'待补充的 JD 原词', matchedCount:'命中 {matched} / {total}', noGaps:'这份 JD 提取出的原词已全部覆盖。', noMatches:'目前还没有命中提取出的 JD 原词。',
           suggestionsTitle:'逐条经历建议', topFixes:'优先处理 {count} 项', optimizedDraft:'优化草稿', draftCaption:'已高亮安全的动词升级',
           improveTitle:'把反馈转化为更高分', improveCopy:'在下方修改完整简历，再重新检查 JD 原词覆盖；需要新的 HR 判断时，再手动点一次 AI 深度点评。', improveButton:'进入优化模式', improveEditorTitle:'优化编辑器', collapseEditor:'收起', editorLabel:'完整简历文本',  reanalyze:'重新分析',   originalScore:'优化前', newScore:'优化后', pointsGained:'变化 +{count} 分', pointsChanged:'变化 {count} 分', keywordCoverage:'JD 原词覆盖', keywordsGained:'增加 +{count} 个', keywordsChanged:'变化 {count} 个', scoreDroppedHint:'分数下降通常是因为重写丢失了原有关键词，建议对照缺失关键词检查。', scanLabel:'第 {count} 次：{score}', exportTitle:'导出最新版本', exportCopy:'下载 ATS 友好的纯文本文件，或复制当前优化版简历。', downloadResume:'下载优化简历', saveAsPdf:'保存为 PDF', pdfHandoffFailed:'浏览器存储不可用，请复制改写结果，在 PDF 工作台粘贴后制作。', copyResume:'复制到剪贴板', copiedResume:'优化简历已复制到剪贴板。', copyFailed:'复制失败，请在编辑框中手动选择并复制。', gatePlaceholder:'you@example.com', gateInvalid:'请输入有效的邮箱地址。', sendEmailPrivacy:'仅用于本次发送，发送后立即丢弃，不会保存。',
-          aiTitle:'AI 改写 — DeepSeek', aiBeta:'测试版', aiIntro:'生成完整的岗位定向简历；改写后重算 ATS 原词覆盖并高亮改动；AI 点评需要另行点击。', rulePath:'快速规则优化', rulePathCopy:'在上方编辑器中即时、本地完成动词替换和关键词检查。', aiPath:'AI 改写', aiPathCopy:'Worker 会安全调用 DeepSeek，并发送简历、职位描述及最多 40 个缺失 JD 原词。', privacyNote:'仅当你点击“使用 AI 改写”时，简历、职位描述和缺失关键词才会发送到 Cloudflare Worker。DeepSeek 密钥只保存在服务端，绝不会发送到浏览器。', rewriteAi:'使用 AI 改写', rewritingAi:'AI 正在改写，请稍候（约30-60秒）', aiOutputTitle:'AI 改写后的完整简历', aiCopy:'复制', aiCopied:'AI 改写结果已复制到剪贴板。', sendEmail:'发送到邮箱', sendingEmail:'正在发送…', sendEmailTitle:'将优化版简历发送到邮箱', sendEmailCopy:'请输入接收 TXT 附件的邮箱地址。', sendEmailSubmit:'发送简历', sendEmailSuccess:'已发送，请查收', sendEmailFailed:'邮件发送失败，请稍后重试。', aiCoverageUnchanged:'本次 JD 原词覆盖没有增加。文字虽有调整，但不能据此认为匹配度提高；缺失技能只有在你确实具备时才能补充。', aiCoverageLower:'本次 JD 原词覆盖下降了，请先检查丢失的关键词，再决定是否使用这个版本。', aiCoverageGained:'本次 JD 原词覆盖增加了，请确认新增表述都有真实经历支撑。', rewriteGained:'新增命中', rewriteLost:'丢失命中', rewriteRemaining:'仍未覆盖', rewriteNoTerms:'无', aiAutoScored:'已重算 ATS 原词覆盖并同步到编辑器。需要新的 AI 点评时请另行点击（10 积分）。', aiIncomplete:'AI 返回的内容似乎不完整，请重试；本次不会评分或同步到编辑器。', aiRewriteLimit:'今日改写次数已用完', aiRewriteConfig:'改写服务配置中，请稍后再试', aiHttpError:'改写失败 (HTTP {status})。{detail}', aiNetwork:'网络连接失败，请检查网络后重试。', aiUnparseable:'改写服务返回内容无法读取，请重试。', technicalDetails:'查看详细错误', technicalStatus:'HTTP 状态', technicalBody:'原始响应内容', noResponse:'无响应', noBody:'（空）', fetchError:'网络错误', diffTitle:'改写对比', diffOriginal:'原简历', diffRewritten:'改写后', diffNote:'绿色为 AI 改写/放大的表述，面试可能被问到，请逐条确认。', reviewNotRequested:'下方保留的是原简历点评，改写版尚未进行 AI 点评，不能把原分数当作新分数。', reviewOriginalDetails:'查看改写前的完整点评', reviewNewVersion:'点评改写版 · 10 积分', reviewCompareTitle:'AI 点评前后对比', reviewBeforeUnavailable:'改写前未点评', reviewRefreshLoading:'AI 正在复评改写后的简历…', reviewRefreshFailed:'AI 复评失败，已保留改写前分数；点击下方按钮重试。', reviewRefreshLimit:'今日免费点评次数已用完，已保留改写前分数。', reviewRefreshRetry:'重试 AI 复评',
+          aiTitle:'AI 改写 — DeepSeek', aiBeta:'测试版', aiIntro:'生成完整的岗位定向简历；改写后自动刷新 ATS 与 AI 评分，并高亮全部改动供你确认。', rulePath:'快速规则优化', rulePathCopy:'在上方编辑器中即时、本地完成动词替换和关键词检查。', aiPath:'AI 改写', aiPathCopy:'Worker 会安全调用 DeepSeek，并发送简历、职位描述及最多 40 个缺失 JD 原词。', privacyNote:'仅当你点击“使用 AI 改写”时，简历、职位描述和缺失关键词才会发送到 Cloudflare Worker。DeepSeek 密钥只保存在服务端，绝不会发送到浏览器。', rewriteAi:'使用 AI 改写 · 附赠一次点评', rewritingAi:'AI 正在改写，请稍候（约30-60秒）', aiOutputTitle:'AI 改写后的完整简历', aiCopy:'复制', aiCopied:'AI 改写结果已复制到剪贴板。', sendEmail:'发送到邮箱', sendingEmail:'正在发送…', sendEmailTitle:'将优化版简历发送到邮箱', sendEmailCopy:'请输入接收 TXT 附件的邮箱地址。', sendEmailSubmit:'发送简历', sendEmailSuccess:'已发送，请查收', sendEmailFailed:'邮件发送失败，请稍后重试。', aiAutoScored:'已刷新 ATS 原词覆盖并同步到优化编辑器；AI 复评状态见下方。', aiIncomplete:'AI 返回的内容似乎不完整，请重试；本次不会评分或同步到编辑器。', aiRewriteLimit:'今日改写次数已用完', aiRewriteConfig:'改写服务配置中，请稍后再试', aiHttpError:'改写失败 (HTTP {status})。{detail}', aiNetwork:'网络连接失败，请检查网络后重试。', aiUnparseable:'改写服务返回内容无法读取，请重试。', technicalDetails:'查看详细错误', technicalStatus:'HTTP 状态', technicalBody:'原始响应内容', noResponse:'无响应', noBody:'（空）', fetchError:'网络错误', diffTitle:'改写对比', diffOriginal:'原简历', diffRewritten:'改写后', diffNote:'绿色为 AI 改写/放大的表述，面试可能被问到，请逐条确认。', reviewCompareTitle:'AI 点评前后对比', reviewBeforeUnavailable:'改写前未点评', reviewRefreshLoading:'AI 正在复评改写后的简历…', reviewRefreshFailed:'AI 复评失败，已保留改写前分数；点击下方按钮重试。', reviewRefreshLimit:'今日免费点评次数已用完，已保留改写前分数。', reviewRefreshRetry:'重试 AI 复评',
           weakResponsible:'“Responsible for”削弱了第 {bullet} 条经历', weakResponsibleTip:'用 Led、Owned 或 Delivered 直接体现所有权。', weakHelped:'“Helped”削弱了第 {bullet} 条经历', weakHelpedTip:'明确你的直接贡献，例如 Built、Resolved 或 Improved。', weakWorked:'“Worked on”削弱了第 {bullet} 条经历', weakWorkedTip:'改用具体动词，例如 Developed、Shipped 或 Optimized。', weakParticipated:'“Participated in”削弱了第 {bullet} 条经历', weakParticipatedTip:'说明你的具体角色，例如 Coordinated、Led 或 Resolved。', weakAssisted:'“Assisted”削弱了第 {bullet} 条经历', weakAssistedTip:'直接写明你本人交付的成果。', noMetric:'第 {bullet} 条经历缺少量化结果', noMetricTip:'若可验证，请补充规模、速度、可靠性、采用率、成本或节省时间。', strongBullets:'经历要点结构良好', strongBulletsTip:'经历要点使用直接动词，并包含可衡量证据。',
           sectionSummary:'概述', sectionExperience:'工作经历', sectionEducation:'教育背景', sectionSkills:'技能'
         }
@@ -690,8 +718,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         resumeCount.textContent = t('wordCount', {count:words(resumeEl.value).length});
         jobCount.textContent = t('wordCount', {count:words(jobEl.value).length});
       }
-      resumeEl.addEventListener('input', function(){ updateCounts(); window.resumePdf.sourceChanged(resumeEl.value); });
-      jobEl.addEventListener('input', updateCounts);
+      resumeEl.addEventListener('input', function(){ updateCounts(); window.resumePdf.sourceChanged(resumeEl.value); persistState(); });
+      jobEl.addEventListener('input', function(){ updateCounts(); persistState(); });
 
       sampleBtn.addEventListener('click', function () {
         resumeEl.value = sampleResume;
@@ -1008,9 +1036,6 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         if(!aiReviewComparison)return '';
         var before=Array.isArray(aiReviewComparison.before)?aiReviewComparison.before:null;
         var status=aiReviewComparison.status||'success';
-        if(status==='not-requested'){
-          return '<section class="review-comparison"><h4>'+esc(t('reviewCompareTitle'))+'</h4><div class="review-compare-list">'+reviewStateRowsMarkup(before,'idle')+'</div><p class="ai-sync-note">'+esc(t('reviewNotRequested'))+'</p>'+(aiReviewComparison.originalReview?'<details><summary>'+esc(t('reviewOriginalDetails'))+'</summary>'+hrReviewOutputInnerMarkup(aiReviewComparison.originalReview)+'</details>':'')+'<button class="button button-secondary button-sm" id="aiReviewRetryBtn" type="button">'+actionLabel('spark',t('reviewNewVersion'))+'</button></section>';
-        }
         if(status==='loading'){
           return '<section class="review-comparison" aria-busy="true"><h4>'+esc(t('reviewCompareTitle'))+'</h4><div class="review-compare-list">'+reviewStateRowsMarkup(before,'loading')+'</div><div class="review-compare-state" role="status"><span class="ai-spinner" aria-hidden="true"></span><p>'+esc(t('reviewRefreshLoading'))+'</p></div></section>';
         }
@@ -1042,11 +1067,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       }
 
       function aiComparisonMarkup(){
-        if(!aiComparison)return '';
-        var delta=aiComparison.afterMatched-aiComparison.beforeMatched;
-        var outcome=t(delta>0?'aiCoverageGained':delta<0?'aiCoverageLower':'aiCoverageUnchanged');
-        var details=[['rewriteGained',aiComparison.gained],['rewriteLost',aiComparison.lost],['rewriteRemaining',aiComparison.remaining]].map(function(row){return '<div><strong>'+esc(t(row[0]))+'</strong><p>'+esc((row[1]||[]).join(' · ')||t('rewriteNoTerms'))+'</p></div>';}).join('');
-        return '<div class="ai-score-result"><div class="rewrite-score-comparisons">'+comparisonRowsMarkup(aiComparison)+aiReviewComparisonMarkup()+'</div><p class="rewrite-outcome" role="status">'+esc(outcome)+'</p><div class="rewrite-keyword-details">'+details+'</div><p class="ai-sync-note">'+esc(t('aiAutoScored'))+'</p></div>';
+        return aiComparison?'<div class="ai-score-result"><div class="rewrite-score-comparisons">'+comparisonRowsMarkup(aiComparison)+aiReviewComparisonMarkup()+'</div><p class="ai-sync-note">'+esc(t('aiAutoScored'))+'</p></div>':'';
       }
 
       function hrReviewOutputInnerMarkup(review){
@@ -1156,6 +1177,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           }
           latestHrReview={overall:payload.overall.trim(),model:payload.model.trim(),dimensions:normalizedDimensions};
           reviewSucceeded=true;
+          persistState();
         }catch(error){
           hrReviewError=t('hrReviewFailed');
         }finally{
@@ -1335,7 +1357,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
             response=await workerFetch('/api/rewrite',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({lang:currentLang,resume:source,jd:job,missing:beforeData.missing.slice(0,40).map(function(k){return k.term;})})
+              body:JSON.stringify({lang:currentLang,resume:source,jd:job,missing:beforeData.missing.slice(0,40).map(function(k){return k.term;}),include_review:true})
             });
           }catch(fetchErr){
             showAiError(status,errorDetails,t('aiNetwork'),null,'',fetchErr&&fetchErr.message?fetchErr.name+': '+fetchErr.message:String(fetchErr));
@@ -1375,16 +1397,24 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           lastAnalysis=rescored;
           lastResume=latestAiOutput;
           lastJob=job;
-          resumeEl.value=latestAiOutput;
           updateCounts();
-          latestHrReview=null;
           hrReviewLoading=false;
           hrReviewError='';
-          aiReviewComparison=beforeReview?{status:'not-requested',before:validReviewScores(beforeReview),originalReview:beforeReview}:null;
           scanHistory.push({ats:rescored.atsScore});
           preserveScroll(function(){renderResults(rescored,latestAiOutput,false);});
           setMessageKey('analysisComplete',{ats:rescored.atsScore},false);
+          // 改写附带的免费点评
+          if(payload.review&&payload.review.dimensions){
+            latestHrReview={overall:payload.review.overall,model:payload.review.model,dimensions:payload.review.dimensions};
+            var beforeScores=beforeReview?validReviewScores(beforeReview):null;
+            aiReviewComparison={status:'success',before:beforeScores,after:validReviewScores(latestHrReview)};
+          }else{
+            latestHrReview=null;
+            aiReviewComparison=beforeReview?{status:'failed',before:validReviewScores(beforeReview),originalReview:beforeReview}:null;
+          }
           updateAiReviewComparisonPanel();
+          if(latestHrReview)updateHrReviewPanel({});
+          persistState();
         }finally{
           var liveButton=document.getElementById('aiRewriteBtn');
           if(liveButton){liveButton.disabled=false;liveButton.innerHTML=actionLabel('spark',t('rewriteAi'));}
@@ -1403,7 +1433,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         var downloadBtn=document.getElementById('downloadBtn');if(downloadBtn)downloadBtn.addEventListener('click',downloadLatest);
         var aiDownloadBtn=document.getElementById('aiDownloadBtn');if(aiDownloadBtn)aiDownloadBtn.addEventListener('click',downloadLatest);var savePdfBtn=document.getElementById('savePdfBtn');if(savePdfBtn)savePdfBtn.addEventListener('click',function(){
           if(!latestAiOutput)return;
-          try{sessionStorage.setItem('checkats_analyzer_snapshot',JSON.stringify(analyzerSnapshot()));sessionStorage.setItem('checkats_studio_handoff',JSON.stringify({text:currentResumeText()||latestAiOutput,lang:currentLang}));}
+          try{sessionStorage.setItem('checkats_analyzer_snapshot',JSON.stringify(analyzerSnapshot()));sessionStorage.setItem('checkats_studio_handoff',JSON.stringify({text:latestAiOutput,lang:currentLang}));}
           catch(e){var status=document.getElementById('aiStatus');if(status)status.textContent=t('pdfHandoffFailed');return;}
           window.location.href='/studio/?lang='+currentLang;
         });
@@ -1445,7 +1475,11 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         var saved=await window.CheckATSBilling.saveJob(Object.assign(analyzerSnapshot(),{company:context?.company||'',role:context?.role||''}),context?.id,context?.updated_at);
         if(saved){sessionStorage.setItem('checkats_job_context',JSON.stringify({id:saved.id,company:saved.company,role:saved.role,updated_at:saved.updated_at}));setMessageKey('jobSaved',{},false);}
       }
-      try{var restored=JSON.parse(sessionStorage.getItem('checkats_analyzer_restore')||'null');if(restored){resumeEl.value=restored.rewritten||restored.resume||'';jobEl.value=restored.jd||'';latestAiOutput=restored.rewritten||'';latestHrReview=restored.review||null;latestAiOriginal=restored.resume||'';updateCounts();if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);}sessionStorage.removeItem('checkats_analyzer_restore');}}catch(_){}
+      try{var restored=JSON.parse(sessionStorage.getItem('checkats_analyzer_restore')||'null');if(restored){resumeEl.value=restored.rewritten||restored.resume||'';jobEl.value=restored.jd||'';latestAiOutput=restored.rewritten||'';latestHrReview=restored.review||null;latestAiOriginal=restored.resume||'';updateCounts();if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);}sessionStorage.removeItem('checkats_analyzer_restore');persistState();}}catch(_){}
+      if(!lastAnalysis&&restoreState()){
+        var scoreText=latestAiOutput||resumeEl.value;
+        if(scoreText.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(scoreText,jobEl.value);lastResume=scoreText;lastJob=jobEl.value;renderResults(lastAnalysis,scoreText,false);if(latestHrReview)updateHrReviewPanel({});}
+      }
       authUI = window.CheckATSAuthUI.mount({language:function(){return currentLang;},request:workerFetch});
       updateCounts();
     })();
