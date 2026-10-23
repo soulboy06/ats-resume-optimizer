@@ -24,8 +24,22 @@ echo '{"project":"ats-resume-optimizer","dir":"<repo>/pages-deploy"}' \
   | python3 ~/workspace/skills/cloudflare/bin/pages_deploy.py
 ```
 
-Worker → `wrangler deploy` (or the Cloudflare dashboard); set secrets with
-`wrangler secret put DEEPSEEK_API_KEY / RESEND_API_KEY / ADMIN_PASS`.
+Worker is now an ES-module bundle, including `cloudflare/billing-core.js`. Deploy
+with `npx wrangler deploy --config cloudflare/wrangler.toml` after checking the
+AI, KV and D1 bindings. Do not upload only `hr-review-worker.js`. Set each secret
+with `npx wrangler secret put <NAME> --config cloudflare/wrangler.toml`.
+
+Billing requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PACK_PRODUCT_ID`
+and `CREEM_PASS_PRODUCT_ID`. Create the $9.90 one-time product and $19.90 monthly
+product first, and register `/api/billing/webhook` with Creem. The checkout stays
+disabled without this configuration. Verify test-mode checkout, renewal and
+refunds before enabling real payments. The D1 billing tables initialize on first
+request; `cloudflare/billing-schema.sql` is the matching schema.
+
+Deploy the updated Worker before publishing the account pages. The PDF preview
+currently generates bytes in the browser: the official export action checks
+points, but strict protection against client-side extraction requires moving
+PDF generation to a server.
 
 ## Sync workflow (Muse + local agent)
 
@@ -50,7 +64,7 @@ commit; never commit secrets (`.gitignore` covers the usual suspects).
 - Scoring is a simulation, labeled as such in the UI: ATS pass rate =
   JD keyword coverage 60% + plain-text parsability 40%.
 - Local ATS checks remain available without login; AI operations use the current
-  Supabase account and credit system. Do not add paid UI without the owner's go-ahead.
+  Supabase account and point system described on the owner-approved plans page.
 - The UI uses the owner-approved Craft-inspired editorial design: warm cream
   graph paper, terracotta accents, serif headings, and frosted glass components
   (2026-10-12). Keep decorative imagery and colored background blobs out of the UI.

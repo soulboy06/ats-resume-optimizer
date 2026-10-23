@@ -20,7 +20,7 @@
     const result=templates.filter(template=>matches(template,filter)&&[template.name.en,template.name.zh,template.desc.en,template.desc.zh].join(' ').toLowerCase().includes(search.toLowerCase().trim()));
     const fragment=document.createDocumentFragment();
     for(const template of result){
-      const selected=template.id===current,card=document.createElement('a');card.className='library-card glass'+(selected?' is-current':'');card.href=studioUrl(template.id);card.dataset.template=template.id;
+      const selected=template.id===current,card=document.createElement('a');card.className='library-card glass'+(selected?' is-current':'');card.href=studioUrl(template.id);card.dataset.template=template.id;card.addEventListener('click',event=>{if(!window.CheckATSBilling.templateAllowed(template.id)){event.preventDefault();window.CheckATSBilling.plansDialog(lang==='zh'?'解锁全部 30 个模板':'Unlock all 30 templates');}});
       card.setAttribute('aria-label',t(selected?'continue':'use')+' · '+template.name[lang]);
       if(selected)card.setAttribute('aria-current','true');
       const preview=document.createElement('div');preview.className='library-card-preview';
@@ -28,7 +28,7 @@
       if(selected){const badge=document.createElement('span');badge.className='library-selected';badge.textContent='✓ '+t('current');preview.append(badge);}
       const footer=document.createElement('div');footer.className='library-card-footer';
       const heading=document.createElement('div');heading.className='library-card-title';const name=document.createElement('h2');name.textContent=template.name[lang];const number=document.createElement('span');number.className='library-card-number';number.textContent=String(templates.indexOf(template)+1).padStart(2,'0');heading.append(name,number);
-      const action=document.createElement('div');action.className='library-card-action';const kind=document.createElement('span');kind.className='library-card-kind';kind.textContent=t(columns(template)?'columns':'single');const use=document.createElement('span');use.className='library-card-use';use.textContent=t(selected?'continue':'use');use.insertAdjacentHTML('beforeend','<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>');action.append(kind,use);footer.append(heading,action);card.append(preview,footer);fragment.append(card);
+      const action=document.createElement('div');action.className='library-card-action';const kind=document.createElement('span');kind.className='library-card-kind';kind.textContent=t(columns(template)?'columns':'single');const use=document.createElement('span');use.className='library-card-use';use.textContent=window.CheckATSBilling.templateAllowed(template.id)?t(selected?'continue':'use'):(lang==='zh'?'付费模板':'Premium template');use.insertAdjacentHTML('beforeend','<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>');action.append(kind,use);footer.append(heading,action);card.append(preview,footer);fragment.append(card);
     }
     $('templateLibraryGrid').replaceChildren(fragment);$('libraryEmpty').hidden=result.length>0;$('libraryCount').textContent=t('count').replace('{n}',result.length);
     document.querySelectorAll('[data-filter]').forEach(button=>{const kind=button.dataset.filter;button.setAttribute('aria-pressed',String(kind===filter));button.textContent=t(kind)+' '+templates.filter(template=>matches(template,kind)).length;});
@@ -47,5 +47,5 @@
   $('resetFilters').addEventListener('click',()=>{filter='all';search='';$('templateSearch').value='';render();$('templateSearch').focus();});
   document.querySelectorAll('[data-lang]').forEach(button=>button.addEventListener('click',()=>{lang=button.dataset.lang;const url=new URL(location.href);url.searchParams.set('lang',lang);history.replaceState(null,'',url);language();}));
   window.addEventListener('pageshow',event=>{if(event.persisted){readCurrent();language();}});
-  readCurrent();language();
+  readCurrent();language();window.CheckATSBilling.refresh().then(()=>render()).catch(()=>{});
 })();

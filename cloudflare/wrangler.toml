@@ -1,0 +1,25 @@
+name = "ats-hr-review"
+main = "hr-review-worker.js"
+compatibility_date = "2026-10-23"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "checkats"
+database_id = "20324804-bf68-497a-accd-b7eeaf9fe299"
+
+[[kv_namespaces]]
+binding = "RATE_KV"
+id = "33fd172d50d046119e92b7da69ed1ca8"
+
+[vars]
+SUPABASE_URL = "https://qcjlagocvexlwbjvonps.supabase.co"
+CREEM_TEST_MODE = "true"
+# Configure CREEM_PACK_PRODUCT_ID and CREEM_PASS_PRODUCT_ID after creating products.
+# Set CREEM_API_KEY / CREEM_WEBHOOK_SECRET as Worker secrets, never frontend values.
+# Retain existing DEEPSEEK_API_KEY / RESEND_API_KEY / ADMIN_PASS Worker secrets.
+# Register /api/billing/webhook for checkout.completed, subscription.paid,
+# subscription.scheduled_cancel, subscription.expired, refund.created, dispute.created.
+# The subscription product's billing period must match its displayed billing terms.

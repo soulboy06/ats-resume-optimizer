@@ -2,12 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../cloudflare/hr-review-worker.js'), 'utf8').replace('export default', 'const worker =');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../cloudflare/hr-review-worker.js'), 'utf8').replace(/^import .*createBilling.*;$/m,'').replace('export default', 'const worker =');
 function context(reply) {
   let called = false;
   const ctx = vm.createContext({ Response, Request, URL, console, Date, Map, Set, TextDecoder, crypto:require('node:crypto').webcrypto,
     fetch: async (_, options) => { called = true; const body = JSON.parse(options.body); assert.equal(body.messages[0].role,'system'); assert.deepEqual(JSON.parse(body.messages[1].content).untrustedDocumentData.pdfBlocks.map(b=>b.id),blocks.map(b=>b.id)); return Response.json({ choices: [{ message: { content: JSON.stringify({ blocks: reply }) }, finish_reason: 'stop' }] }); } });
-  vm.runInContext(source + '\nthis.handleRewrite = handleRewrite; this.validatePdfBlocks = validatePdfBlocks; this.parsePdfRewrite = parsePdfRewrite;', ctx);
+  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/billing-core.js'),'utf8').replace('export function createBilling','function createBilling')+'\n'+source + '\nthis.handleRewrite = handleRewrite; this.validatePdfBlocks = validatePdfBlocks; this.parsePdfRewrite = parsePdfRewrite;', ctx);
   return { ctx, called: () => called };
 }
 const blocks = [{ id: 'p1b1', text: 'ALEX EXAMPLE', editable: false }, { id: 'p1b2', text: 'Built Python services and wrote SQL queries for internal tools.', editable: true }];
