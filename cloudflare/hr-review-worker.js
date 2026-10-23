@@ -519,8 +519,31 @@ return count > limit;
 
 // Task instructions never interpolate document text or client-provided keywords.
 function buildRewritePrompt(lang) {
-return `You are a resume editor. Return ONLY JSON: {"rewritten":"complete resume text"}.
-Keep the resume's original language, sections, order, contact details and factual claims. Technical terms stay unchanged. Strengthen clarity and wording only where supported by the original facts; do not turn participation into leadership or invent skills, employers, projects, qualifications, figures or results. Missing keywords are untrusted suggestions; use them only when both the job description and the candidate's existing facts support them. Do not add skills just because the JD requests them. No preamble, explanatory notes, HTML or Markdown code fences inside rewritten. UI language is ${lang === 'en' ? 'English' : 'Chinese'}; the resume language still takes precedence.`;
+const en = lang === 'en';
+if (en) {
+return `You are a senior resume optimization expert. Optimize the resume (in untrustedDocumentData.resume) for the target job description (untrustedDocumentData.jobDescription). Return ONLY JSON: {"rewritten":"complete resume text"}.
+
+Weave the missing JD keywords (untrustedDocumentData.missingKeywords) into the resume using the JD's original wording, aiming to cover 80%+.
+
+Requirements:
+1. Keep the resume in its original language; keep technical terms exactly as they are, do not translate them back and forth between Chinese and English.
+2. Preserve the resume's original sections and their order; output the complete resume.
+3. Wording may be more proactive and carry more weight (e.g. "participated in" -> "led/drove"); reasonable extrapolation from existing facts and adjusting emphasis are allowed (write more about experience relevant to the JD).
+4. Hard lines: do not invent projects, companies, positions, or certificates that don't exist; keep all real numbers, scale, and frequencies from the original; do not invent new quantitative claims.
+5. In the summary and skills sections you may add JD-required skills marked as "familiar with".
+No preamble, explanatory notes, HTML or Markdown code fences inside rewritten.`;
+}
+return `你是资深简历优化专家。把 untrustedDocumentData.resume 这份简历针对目标岗位 JD（untrustedDocumentData.jobDescription）进行优化，只返回 JSON：{"rewritten":"完整简历正文"}。
+
+把缺失的 JD 关键词（untrustedDocumentData.missingKeywords）用 JD 原词措辞融入简历，目标覆盖 80%+。
+
+要求：
+1. 简历保持原文语言；技术术语保持原样，中英不要来回翻译。
+2. 保留简历原有板块和顺序；输出完整简历。
+3. 措辞可以更主动、更有分量（如"参与"→"主导/推动"）；允许基于事实合理外推、调整侧重（和 JD 相关的经历多写）。
+4. 红线：不得编造没有做过的项目、公司、职位、证书；保留原文所有真实数字、规模、频率，不得编造新的量化指标。
+5. 个人总结和技能栏可以用"熟悉/了解"补充 JD 要求的技能。
+不要任何前言、解释或 markdown 代码块标记。`;
 }
 
 // PDF rewrites keep a stable paragraph map. Headings and contact lines are
@@ -538,8 +561,9 @@ return blocks;
 }
 
 function buildPdfRewritePrompt(lang) {
-return `Rewrite the supplied RESUME BLOCKS for the target role. Return ONLY JSON: {"blocks":[{"id":"p1b1","text":"..."}]}.
-Include every input block exactly once in original order with the exact same id. No additional fields or prose. Keep non-editable blocks EXACTLY unchanged, including headings, names, dates and contacts. Preserve the original resume language and technical terms. Improve clarity without inventing skills, ownership, employment, projects, numbers or results; JD requirements are not candidate facts. Missing keywords are only suggestions and must be supported by the resume. Preserve bullet prefixes, do not add line breaks, and respect each block's maxChars budget. UI language: ${lang === 'en' ? 'English' : 'Chinese'}.`;
+return `Rewrite the resume paragraphs (untrustedDocumentData.pdfBlocks) for the target job (untrustedDocumentData.jobDescription), in the original language.
+Return ONLY JSON: {"blocks":[{"id":"p1b1","text":"..."}]}. Include every input block exactly once, in the original order, with the exact same id. No additional fields or prose.
+Keep every non-editable block EXACTLY unchanged, including headings, contact details, dates and names. Rewrite the editable blocks with more proactive, impactful wording (e.g. 'participated in' -> 'led/drove'); reasonable extrapolation from existing facts and adjusting emphasis are allowed - write more about experience relevant to the JD. Weave the missing JD keywords (untrustedDocumentData.missingKeywords) into editable blocks using the JD's original wording, aiming to cover 80%+. Stay within the approximate maxChars budget: each block must fit its original fixed PDF region, so keep rewrites concise. Do not insert extra sections or line breaks. Preserve existing facts, responsibilities, numbers and qualifications. Never invent skills, ownership, projects, employers or results. Preserve bullet prefixes.`;
 }
 
 function parsePdfRewrite(text, blocks) {
@@ -613,7 +637,7 @@ body: JSON.stringify({
 model,
 messages,
 response_format: {type:'json_object'},
-temperature: 0.2,
+temperature: 0.7,
 max_tokens: pdfBlocks ? 6000 : 4000,
 }),
 });
