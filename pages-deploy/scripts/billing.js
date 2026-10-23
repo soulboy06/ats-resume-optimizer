@@ -2,7 +2,8 @@
 (function(){
   'use strict';
   const ORIGIN='https://ats-hr-review.hhjgudhdjugudh878.workers.dev';
-  let account=null,revision=0,refreshPromise=null;
+  let account=null,accountAt=0,revision=0,refreshPromise=null;
+  const ACCOUNT_TTL=60000;
   const listeners=new Set();
   const language=()=>{const q=new URLSearchParams(location.search).get('lang');if(q==='zh'||q==='en')return q;const h=document.documentElement.lang||'';return h.toLowerCase().startsWith('zh')?'zh':'en';};
   const words=(zh,en)=>language()==='zh'?zh:en;
@@ -23,10 +24,21 @@
     return data;
   }
   async function refresh(){
+    if(refreshPromise)return refreshPromise;
     const current=++revision,session=window.CheckATSAuth?.getSession();
-    if(!session){account=null;emit();return null;}
-    const promise=request('/api/billing/account');refreshPromise=promise;
-    try{const data=await promise;if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;emit();}return current===revision?data:null;}finally{if(refreshPromise===promise)refreshPromise=null;}
+    if(!session){account=null;accountAt=0;emit();return null;}
+    const promise=request('/api/billing/account').then(data=>{
+      if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;accountAt=Date.now();emit();}
+      return current===revision?data:null;
+    });
+    refreshPromise=promise;
+    promise.catch(()=>{}).finally(()=>{if(refreshPromise===promise)refreshPromise=null;});
+    return promise;
+  }
+  function cachedAccount(){
+    if(!window.CheckATSAuth?.getSession())return null;
+    if(!account||Date.now()-accountAt>ACCOUNT_TTL)return null;
+    return account;
   }
   function modal(title,content,actions=[]){
     document.getElementById('billingDialog')?.close();document.getElementById('billingDialog')?.remove();
@@ -41,7 +53,10 @@
   function plansDialog(title){modal(title,'<p>'+words('一次性购买 800 积分，或订阅每期获得 2,000 积分。','Buy 800 permanent points, or subscribe for 2,000 points per period.')+'</p>',[{label:words('查看套餐与权益','View plans'),run:()=>{location.href=link('plans');}}]);}
   async function requireAi(kind){
     if(!requireLogin())return false;
-    try{const a=await refresh();if(!a)return false;const cost=kind==='review'?10:20;if(a.points.total>=cost)return true;
+    const cost=kind==='review'?10:20;
+    const cached=cachedAccount();
+    if(cached&&cached.points.total>=cost){refresh().catch(()=>{});return true;}
+    try{const a=await refresh();if(!a)return false;if(a.points.total>=cost)return true;
       const actions=[];if(!a.checked_in)actions.push({label:words('签到领取 10 积分','Check in for 10 points'),run:async d=>{await checkin();d.close();}});
       actions.push({label:words('购买积分','Buy points'),secondary:!!actions.length,run:()=>{location.href=link();}});
       modal(words('积分不足','Not enough points'),'<p>'+words('本次需要 '+cost+' 积分，当前余额 '+a.points.total+' 积分。','This action costs '+cost+' points. Your balance is '+a.points.total+'.')+'</p>',actions);return false;
@@ -64,13 +79,13 @@
   function templateAllowed(id){return isBasicTemplate(id)||!!account?.entitlements?.premium;}
   async function saveJob(snapshot,id,expectedUpdatedAt){
     if(!requireLogin())return null;
-    let a;try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return null;}
+    let a=cachedAccount();if(!a){try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return null;}}else refresh().catch(()=>{});
     if(!a?.entitlements?.premium){plansDialog(words('解锁岗位方案保存','Unlock saved job applications'));return null;}
     return new Promise(resolve=>{let saved=false;const d=modal(words('为这份准备起个名字','Name this application'),'<form id="saveJobForm"><label>'+words('公司名称','Company')+'<input name="company" required maxlength="100" autocomplete="organization" value="'+escape(snapshot.company||'')+'"></label><label>'+words('岗位名称','Job title')+'<input name="role" required maxlength="120" value="'+escape(snapshot.role||'')+'"></label><p class="billing-muted">'+words('保存简历、JD、AI 结果与排版设置。','Save your resume, job description, AI results and layout settings.')+'</p></form>',[{label:words('保存岗位方案','Save application'),run:async dialog=>{const form=dialog.querySelector('form');if(!form.reportValidity())return;const payload={company:form.company.value.trim(),role:form.role.value.trim(),snapshot,...(expectedUpdatedAt?{expected_updated_at:expectedUpdatedAt}:{})};const result=await request('/api/jobs'+(id?'/'+encodeURIComponent(id):''),{method:id?'PUT':'POST',body:JSON.stringify(payload)});saved=true;dialog.close();resolve(result.job);}}]);d.addEventListener('close',()=>{if(!saved)resolve(null);},{once:true});d.querySelector('form').addEventListener('submit',event=>{event.preventDefault();d.querySelector('.billing-dialog-actions button').click();});});
   }
   async function authorizeExport(bytes,filename){
     if(!requireLogin())return false;
-    let a;try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return false;}
+    let a=cachedAccount();if(!a){try{a=await refresh();}catch(error){modal(words('无法读取账号','Account unavailable'),'<p>'+escape(error.message)+'</p>');return false;}}else refresh().catch(()=>{});
     if(!a?.entitlements?.premium){plansDialog(words('解锁 PDF 导出','Unlock PDF export'));return false;}
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=()=>request('/api/billing/export',{method:'POST',body:JSON.stringify({fingerprint:hash,filename})});
