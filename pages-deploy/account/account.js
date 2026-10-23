@@ -97,6 +97,15 @@
     await B.saveJob({...job.snapshot,company:job.company,role:job.role+tr('（副本）',' (copy)')});await loadJobs();render();
   }
   document.addEventListener('click',async event=>{
+    const tabLink=event.target.closest('[data-tab]');
+    if(tabLink){event.preventDefault();const t=tabLink.dataset.tab;
+      if(t&&t!==tab&&['overview','plans','points','jobs'].includes(t)){
+        tab=t;const u=new URL(location.href);u.searchParams.set('tab',t);history.pushState(null,'',u);
+        // tab 切换只重渲染，数据用缓存；jobs tab 确保列表已加载
+        if((t==='jobs'||t==='overview')&&!jobsLoaded&&!jobsError){reload();}
+        else{render();}
+      }
+      return;}
     const select=event.target.closest('[data-select-job]');if(select){try{selected=select.dataset.selectJob;await hydrateJob(selected);detailTab='resume';render();content.querySelector('.jobs-layout')?.classList.add('has-mobile-detail');}catch(error){message(error.message,true);}return;}
     const detail=event.target.closest('[data-detail-tab]');if(detail){const mobile=content.querySelector('.has-mobile-detail');detailTab=detail.dataset.detailTab;render();if(mobile)content.querySelector('.jobs-layout')?.classList.add('has-mobile-detail');content.querySelector('[data-detail-tab="'+detailTab+'"]').focus();return;}
     const filterButton=event.target.closest('[data-filter]');if(filterButton){filter=filterButton.dataset.filter;render();return;}
@@ -107,6 +116,7 @@
   });
   content.addEventListener('input',event=>{if(event.target.id!=='jobSearch')return;const start=event.target.selectionStart;query=event.target.value;render();const search=$('jobSearch');search.focus();search.setSelectionRange?.(start,start);});
   document.querySelectorAll('[data-lang]').forEach(button=>button.addEventListener('click',()=>{lang=button.dataset.lang;const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();authUI.refresh();}));
+  window.addEventListener('popstate',()=>{const t=new URLSearchParams(location.search).get('tab')||'overview';if(t!==tab&&['overview','plans','points','jobs'].includes(t)){tab=t;if((t==='jobs'||t==='overview')&&!jobsLoaded&&!jobsError)reload();else render();}});
   const authUI=window.CheckATSAuthUI.mount({language:()=>lang,request:async(path,options)=>{const data=await B.request(path,options);return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});}});
   window.CheckATSAuth.onAuthStateChange(()=>{jobs=[];selected=null;jobsLoaded=false;account=null;reload();});
   render();reload();
