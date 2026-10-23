@@ -4,7 +4,7 @@
   const ORIGIN='https://ats-hr-review.hhjgudhdjugudh878.workers.dev';
   let account=null,revision=0,refreshPromise=null;
   const listeners=new Set();
-  const language=()=>new URLSearchParams(location.search).get('lang')==='zh'?'zh':'en';
+  const language=()=>{const q=new URLSearchParams(location.search).get('lang');if(q==='zh'||q==='en')return q;const h=document.documentElement.lang||'';return h.toLowerCase().startsWith('zh')?'zh':'en';};
   const words=(zh,en)=>language()==='zh'?zh:en;
   const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const link=(tab='plans')=>'/account/?tab='+tab+'&lang='+language();
