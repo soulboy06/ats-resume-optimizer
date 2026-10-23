@@ -28,7 +28,7 @@
     const current=++revision,session=window.CheckATSAuth?.getSession();
     if(!session){account=null;accountAt=0;emit();return null;}
     const promise=request('/api/billing/account').then(data=>{
-      if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;accountAt=Date.now();emit();}
+      if(current===revision&&window.CheckATSAuth?.getSession()?.user?.id===session.user?.id){account=data;accountAt=Date.now();persistAccount();emit();}
       return current===revision?data:null;
     });
     refreshPromise=promise;
@@ -37,9 +37,13 @@
   }
   function cachedAccount(){
     if(!window.CheckATSAuth?.getSession())return null;
-    if(!account||Date.now()-accountAt>ACCOUNT_TTL)return null;
-    return account;
+    if(account&&Date.now()-accountAt<=ACCOUNT_TTL)return account;
+    try{const s=JSON.parse(sessionStorage.getItem('checkats_account_cache')||'null');
+      if(s&&s.data&&Date.now()-s.ts<=ACCOUNT_TTL&&s.uid===window.CheckATSAuth.getSession().user.id){account=s.data;accountAt=s.ts;return account;}
+    }catch(_){}
+    return null;
   }
+  function persistAccount(){try{if(account)sessionStorage.setItem('checkats_account_cache',JSON.stringify({data:account,ts:accountAt,uid:window.CheckATSAuth?.getSession()?.user?.id}));}catch(_){}}
   function modal(title,content,actions=[]){
     document.getElementById('billingDialog')?.close();document.getElementById('billingDialog')?.remove();
     const previous=document.activeElement,dialog=document.createElement('dialog');dialog.id='billingDialog';dialog.className='billing-dialog';dialog.setAttribute('aria-labelledby','billingDialogTitle');

@@ -85,11 +85,16 @@
     }
     jobsLoaded=true;
   }catch(error){if(current!==loadRevision)return;jobsError=error.message;jobsLoaded=true;}}
-  async function reload(){const current=++loadRevision;accountError='';message('');if(tab!=='plans')content.innerHTML='<p class="billing-loading">'+tr('正在加载…','Loading…')+'</p>';try{
+  async function reload(){const current=++loadRevision;accountError='';message('');
+    // 有缓存先秒渲染，后台刷新
+    const cached=B.getAccount&&B.getAccount();
     const needJobs=(tab==='jobs'||tab==='overview');
-    const [acc]=await Promise.all([B.refresh(),needJobs?loadJobs().catch(()=>{}):null]);
-    if(current!==loadRevision)return;account=acc;render();
-  }catch(error){if(current!==loadRevision)return;account=null;accountError=error.code||'';render();message(error.message,true);}}
+    if(cached){account=cached;if(tab!=='plans')render();if(needJobs)loadJobs().catch(()=>{});}
+    else if(tab!=='plans')content.innerHTML='<p class="billing-loading">'+tr('正在加载…','Loading…')+'</p>';
+    try{
+      const [acc]=await Promise.all([B.refresh(),(needJobs&&!cached)?loadJobs().catch(()=>{}):null]);
+      if(current!==loadRevision)return;account=acc;render();
+    }catch(error){if(current!==loadRevision)return;if(!cached){account=null;accountError=error.code||'';render();message(error.message,true);}}}
   async function openJob(target){const job=jobs.find(j=>j.id===selected);if(!job)return;const snapshot=job.snapshot;try{sessionStorage.setItem('checkats_job_context',JSON.stringify({id:job.id,company:job.company,role:job.role,updated_at:job.updated_at}));if(target==='studio'){if(snapshot.studio)sessionStorage.setItem('checkats_studio_draft',JSON.stringify(snapshot.studio));else sessionStorage.removeItem('checkats_studio_draft');sessionStorage.setItem('checkats_analyzer_snapshot',JSON.stringify(snapshot));if(!snapshot.studio)sessionStorage.setItem('checkats_studio_handoff',JSON.stringify({text:snapshot.rewritten||snapshot.resume||'',lang}));else sessionStorage.removeItem('checkats_studio_handoff');location.href='/studio/?lang='+lang;}else{sessionStorage.setItem('checkats_analyzer_restore',JSON.stringify(snapshot));location.href=lang==='zh'?'/?lang=zh':'/';}}catch(_){message(tr('当前浏览器无法保存跳转内容，请先复制文本。','Browser storage is unavailable. Copy your text before continuing.'),true);}}
   async function jobAction(action,id){let job=jobs.find(j=>j.id===id);if(!job)return;if(action!=='delete')job=await hydrateJob(id);if(!job)return;
     if(action==='delete'){B.modal(tr('删除这份岗位方案？','Delete this application?'),'<p>'+esc(job.company+' · '+job.role)+'</p><p class="billing-muted">'+tr('删除后无法恢复，当前浏览器的编辑草稿不会被删除。','This cannot be undone. Your current local editing draft is kept.')+'</p>',[{label:tr('删除岗位方案','Delete application'),run:async d=>{await B.request('/api/jobs/'+id,{method:'DELETE'});try{sessionStorage.removeItem('checkats_jobs_cache');}catch(_){}d.close();await loadJobs();render();}}]);return;}
