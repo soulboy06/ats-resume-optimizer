@@ -7,6 +7,8 @@
   };
   Object.assign(copy.en,{title:'Resume PDF Studio',back:'Back to analyzer',navAnalyzer:'Resume analyzer',navStudio:'PDF Studio',navGuide:'Guides',contentTab:'Content',styleTab:'Style',pageStyle:'Page style',editContent:'Edit content',templates:'Choose a template',details:'Personal details',role:'Professional title',uploadPhoto:'Add a photo',preview:'Resume preview',download:'Export PDF',saved:'Saved',all:'All',previous:'Previous template',next:'Next template',close:'Close editor',zoomIn:'Zoom in',zoomOut:'Zoom out',fullscreen:'Fullscreen preview'});
   Object.assign(copy.zh,{title:'简历制作工作台',back:'返回改写',navAnalyzer:'简历分析',navStudio:'PDF 工作台',navGuide:'使用指南',contentTab:'内容',styleTab:'样式',pageStyle:'页面样式',editContent:'编辑内容',templates:'选择模板',details:'基本信息',role:'职位',uploadPhoto:'添加照片',preview:'简历预览',download:'导出 PDF',saved:'已保存',all:'全部',previous:'上一个模板',next:'下一个模板',close:'关闭编辑器',zoomIn:'放大预览',zoomOut:'缩小预览',fullscreen:'全屏预览'});
+  Object.assign(copy.en,{authTitle:'Log in',authIntro:'We’ll email you a sign-in link. No password needed.',authClose:'Close',authEmailLabel:'Email',authSendLink:'Send sign-in link',authSending:'Sending…',authCheckEmail:'Sign-in link sent — check your inbox.',authFailed:'Couldn’t send the link. Please try again.',authInvalidEmail:'Enter a valid email address.',authLogin:'Log in',authLogout:'Log out',authCredits:'{count} credits',authCreditsOne:'1 credit',authTabLink:'Magic link',authTabPassword:'Password',authPasswordLabel:'Password',authPasswordHint:'At least 6 characters. Passwords are hashed \u2014 we never see them.',authPasswordIntro:'Log in with your email and password on any device.',authSignIn:'Log in',authSignUp:'Sign up',authNeedAccount:'No account? Sign up',authHaveAccount:'Have an account? Log in',authPasswordTooShort:'Password must be at least 6 characters.',authConfirmEmail:'Account created \u2014 check your email to confirm, then log in.',authForgotPassword:'Forgot password?',authResetSent:'Password reset email sent \u2014 check your inbox.',authNewPasswordLabel:'New password',authSetPassword:'Set new password',authPasswordUpdated:'Password updated \u2014 you are logged in.'});
+  Object.assign(copy.zh,{authTitle:'登录',authIntro:'我们会给你发一封登录链接邮件，无需密码。',authClose:'关闭',authEmailLabel:'邮箱',authSendLink:'发送登录链接',authSending:'发送中…',authCheckEmail:'登录链接已发送，请查收邮件。',authFailed:'发送失败，请重试。',authInvalidEmail:'请输入有效的邮箱地址。',authLogin:'登录',authLogout:'退出',authCredits:'{count} 次',authCreditsOne:'1 次',authTabLink:'邮件链接',authTabPassword:'密码',authPasswordLabel:'密码',authPasswordHint:'至少 6 位。密码经哈希存储，我们看不到明文。',authPasswordIntro:'用邮箱+密码在任何设备上登录。',authSignIn:'登录',authSignUp:'注册',authNeedAccount:'没有账号？去注册',authHaveAccount:'已有账号？去登录',authPasswordTooShort:'密码至少 6 位。',authConfirmEmail:'账号已创建，请查收邮件确认后再登录。',authForgotPassword:'忘记密码？',authResetSent:'重置邮件已发送，请查收邮箱。',authNewPasswordLabel:'新密码',authSetPassword:'设置新密码',authPasswordUpdated:'密码已更新，你已登录。'});
   const map={fName:'name',fTitle:'title',fContact:'contact'};
   Object.assign(copy.en,{lineSpacing:'Line spacing',templateSpacing:'Template default'});
   Object.assign(copy.zh,{lineSpacing:'正文行距',templateSpacing:'模板默认'});
@@ -54,7 +56,7 @@
     document.querySelectorAll('[data-i18n]').forEach(node=>node.textContent=t(node.dataset.i18n));
     document.querySelectorAll('[data-lang]').forEach(button=>{button.setAttribute('aria-pressed',String(button.dataset.lang===lang));button.classList.toggle('active',button.dataset.lang===lang);});
     document.querySelectorAll('[data-home-link]').forEach(link=>link.href=lang==='zh'?'/?lang=zh':'/');document.querySelector('[data-studio-link]').href='/studio/?lang='+lang;document.querySelector('[data-guide-link]').href=lang==='zh'?'/zh/guide/':'/guide/';
-    for(const[id,key]of [['templatePrev','previous'],['templateNext','next'],['editorClose','close'],['editorBackdrop','close'],['zoomIn','zoomIn'],['zoomOut','zoomOut'],['previewFullscreen','fullscreen']])$(id).setAttribute('aria-label',t(key));
+    for(const[id,key]of [['templatePrev','previous'],['templateNext','next'],['editorClose','close'],['editorBackdrop','close'],['zoomIn','zoomIn'],['zoomOut','zoomOut'],['previewFullscreen','fullscreen'],['authClose','authClose']])$(id).setAttribute('aria-label',t(key));
     if($('saveIndicator').textContent)$('saveIndicator').textContent=t('saved');
     for(const key of ['summary','experience','projects','education','skills','certs','other'])$('label-'+key).textContent=t(key);
     if($('handoffStatus').dataset.message)$('handoffStatus').textContent=t($('handoffStatus').dataset.message);
@@ -160,4 +162,131 @@
   grid.addEventListener('wheel',event=>{const delta=event.shiftKey?event.deltaY:event.deltaX;if(Math.abs(delta)<Math.abs(event.shiftKey?event.deltaX:event.deltaY)||!delta)return;event.preventDefault();const now=Date.now();if(now-wheelTime>160)wheelDelta=0;wheelTime=now;wheelDelta+=delta;if(Math.abs(wheelDelta)>45&&now-wheelLastStep>200){stepTemplate(wheelDelta>0?1:-1);wheelDelta=0;wheelLastStep=now;}},{passive:false});
   new ResizeObserver(()=>{layoutCarousel();updateZoom();}).observe($('studioWorkspace'));
   language();sync();updateZoom();if(Object.values(state.data).some(Boolean))schedule();else $('importDetails').open=true;
+
+  // ---- Supabase Auth UI (2026-10-23): shared login state with the analyzer ----
+  (function initStudioAuth(){
+    if(!window.CheckATSAuth) return;
+    const authArea=$('authArea'),authBackdrop=$('authBackdrop'),authForm=$('authForm'),
+      authEmailInput=$('authEmail'),authStatusEl=$('authStatus'),authSubmitBtn=$('authSubmit'),
+      authPasswordInput=$('authPassword'),
+      authSwitch=$('authSwitch'),authSwitchBtn=$('authSwitchBtn');
+    let authMode='password-signin';
+    function setAuthMode(mode){
+      authMode=mode;
+      const isSignup=mode==='password-signup';
+      const label=authSubmitBtn?authSubmitBtn.querySelector('.button-label'):null;
+      if(label){label.textContent=isSignup?t('authSignUp'):t('authSignIn');label.removeAttribute('data-i18n');}
+      if(authSwitchBtn){authSwitchBtn.textContent=isSignup?t('authHaveAccount'):t('authNeedAccount');authSwitchBtn.removeAttribute('data-i18n');}
+      if(authStatusEl){authStatusEl.textContent='';authStatusEl.className='auth-status';}
+    }
+    const escAttr=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const trunc=email=>{email=String(email||'');if(email.length<=24)return email;const p=email.split('@');if(p.length!==2)return email.slice(0,22)+'…';return (p[0].length>12?p[0].slice(0,11)+'…':p[0])+'@'+p[1];};
+    const creditsTx=n=>{n=Number(n);if(!isFinite(n)||n<0)n=0;return n===1?t('authCreditsOne'):t('authCredits').replace('{count}',String(n));};
+    let creditsCache=null;
+    function render(session,credits){
+      if(!authArea)return;
+      if(!session){authArea.innerHTML='<button class="auth-login-btn" id="authLoginBtn" type="button">'+escAttr(t('authLogin'))+'</button>';
+        const b=$('authLoginBtn');if(b)b.addEventListener('click',openModal);return;}
+      const email=(session.user&&session.user.email)||'';
+      let html='<span class="auth-user" title="'+escAttr(email)+'"><span class="auth-email">'+escAttr(trunc(email))+'</span>';
+      if(credits!==null&&credits!==undefined)html+='<span class="auth-credits">'+escAttr(creditsTx(credits))+'</span>';
+      html+='</span><button class="auth-logout-btn" id="authLogoutBtn" type="button">'+escAttr(t('authLogout'))+'</button>';
+      authArea.innerHTML=html;
+      const out=$('authLogoutBtn');if(out)out.addEventListener('click',()=>window.CheckATSAuth.signOut());
+    }
+    async function refresh(){
+      const s=window.CheckATSAuth.getSession();
+      if(!s){creditsCache=null;render(null,null);return;}
+      render(s,creditsCache);
+      try{
+        const token=await window.CheckATSAuth.getAccessToken();
+        const res=await fetch('https://ats-hr-review.hhjgudhdjugudh878.workers.dev/api/auth/me',{headers:token?{'Authorization':'Bearer '+token}:{}});
+        if(res.ok){const d=await res.json().catch(()=>null);
+          if(d&&d.ok===true){creditsCache=d.credits;if(d.email&&s.user&&!s.user.email)s.user.email=d.email;render(s,creditsCache);}}
+      }catch(e){}
+    }
+    function openModal(){
+      if(!window.CheckATSAuth.configured())return;
+      if(authStatusEl){authStatusEl.textContent='';authStatusEl.className='auth-status';}
+      if(authBackdrop){authBackdrop.classList.add('active');authBackdrop.setAttribute('aria-hidden','false');}
+      document.body.classList.add('auth-open');
+      setTimeout(()=>{if(authEmailInput)authEmailInput.focus();},60);
+    }
+    function closeModal(){
+      if(authBackdrop){authBackdrop.classList.remove('active');authBackdrop.setAttribute('aria-hidden','true');}
+      document.body.classList.remove('auth-open');
+    }
+    const closeBtn=$('authClose');if(closeBtn)closeBtn.addEventListener('click',closeModal);
+    if(authBackdrop)authBackdrop.addEventListener('click',e=>{if(e.target===authBackdrop)closeModal();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&authBackdrop&&authBackdrop.classList.contains('active'))closeModal();});
+    if(authSwitchBtn)authSwitchBtn.addEventListener('click',()=>setAuthMode(authMode==='password-signup'?'password-signin':'password-signup'));
+    const authForgotBtn=$('authForgotBtn');
+    if(authForgotBtn)authForgotBtn.addEventListener('click',async()=>{
+      if(authStatusEl){authStatusEl.textContent='';authStatusEl.className='auth-status';}
+      const email=authEmailInput?authEmailInput.value.trim():'';
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(authStatusEl){authStatusEl.textContent=t('authInvalidEmail');authStatusEl.classList.add('error');}return;}
+      authForgotBtn.disabled=true;
+      try{
+        await window.CheckATSAuth.resetPasswordForEmail(email);
+        if(authStatusEl){authStatusEl.textContent=t('authResetSent');authStatusEl.classList.add('success');}
+      }catch(err){if(authStatusEl){authStatusEl.textContent=(err&&err.message)||t('authFailed');authStatusEl.classList.add('error');}}
+      finally{authForgotBtn.disabled=false;}
+    });
+    if(authForm)authForm.addEventListener('submit',async e=>{
+      e.preventDefault();
+      if(authStatusEl){authStatusEl.textContent='';authStatusEl.className='auth-status';}
+      const email=authEmailInput?authEmailInput.value.trim():'';
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(authStatusEl){authStatusEl.textContent=t('authInvalidEmail');authStatusEl.classList.add('error');}return;}
+      const password=authPasswordInput?authPasswordInput.value:'';
+      if(password.length<6){if(authStatusEl){authStatusEl.textContent=t('authPasswordTooShort');authStatusEl.classList.add('error');}return;}
+      if(authSubmitBtn)authSubmitBtn.disabled=true;
+      const label=authSubmitBtn?authSubmitBtn.querySelector('.button-label'):null;
+      const orig=label?label.textContent:'';
+      if(label)label.textContent=t('authSending');
+      try{
+        if(authMode==='password-signup'){
+          const res=await window.CheckATSAuth.signUp(email,password);
+          if(res&&res.needsConfirmation){if(authStatusEl){authStatusEl.textContent=t('authConfirmEmail');authStatusEl.classList.add('success');}}
+          else closeModal();
+        }else{
+          await window.CheckATSAuth.signInWithPassword(email,password);
+          closeModal();
+        }
+        if(authPasswordInput)authPasswordInput.value='';
+      }catch(err){
+        if(authStatusEl){
+          let msg=t('authFailed');
+          if(err&&err.code==='invalid-email')msg=t('authInvalidEmail');
+          else if(err&&err.code==='password-too-short')msg=t('authPasswordTooShort');
+          else if(err&&err.message)msg=err.message;
+          authStatusEl.textContent=msg;authStatusEl.classList.add('error');
+        }
+      }finally{if(authSubmitBtn)authSubmitBtn.disabled=false;if(label)label.textContent=orig;}
+    });
+    window.CheckATSAuth.onAuthStateChange(()=>refresh());
+    window.CheckATSAuth.handleRedirectCallback().catch(()=>{}).then(()=>{refresh();
+      if(window.CheckATSAuth.isRecoverySession&&window.CheckATSAuth.isRecoverySession()){
+        const rf=$('authRecoveryForm'),lf=$('authForm');
+        if(rf&&lf){lf.hidden=true;rf.hidden=false;
+          const ttl=$('authTitle');if(ttl){ttl.textContent=t('authSetPassword');ttl.removeAttribute('data-i18n');}
+          openModal();}
+      }
+    });
+    const authRecoveryForm=$('authRecoveryForm');
+    if(authRecoveryForm)authRecoveryForm.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const st=$('authRecoveryStatus'),np=$('authNewPassword'),pw=np?np.value:'';
+      if(st){st.textContent='';st.className='auth-status';}
+      if(pw.length<6){if(st){st.textContent=t('authPasswordTooShort');st.classList.add('error');}return;}
+      try{
+        await window.CheckATSAuth.updatePassword(pw);
+        if(st){st.textContent=t('authPasswordUpdated');st.classList.add('success');}
+        if(np)np.value='';
+        setTimeout(closeModal,1200);refresh();
+      }catch(err){if(st){st.textContent=(err&&err.message)||t('authFailed');st.classList.add('error');}}
+    });
+    // re-render labels when studio language changes
+    const _language=language;
+    language=function(){_language();refresh();};
+  })();
 })();

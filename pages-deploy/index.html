@@ -82,7 +82,7 @@
       <a href="/" data-home-link data-i18n="navAnalyzer" data-i18n-href-zh="/?lang=zh" aria-current="page">Resume analyzer</a>
       <a href="/studio/" data-studio-link data-i18n="navStudio" data-i18n-href-zh="/studio/?lang=zh" >PDF Studio</a>
       <a href="/guide/" data-guide-link data-i18n="navGuide" data-i18n-href-zh="/zh/guide/">Guides</a>
-    </div><div class="language-toggle" role="group" aria-label="Language"><button class="lang-option active" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div>
+    </div><div class="nav-right"><div class="language-toggle" role="group" aria-label="Language"><button class="lang-option active" type="button" data-lang="en" aria-pressed="true">EN</button><button class="lang-option" type="button" data-lang="zh" aria-pressed="false">中文</button></div><div class="auth-area" id="authArea"></div></div>
   </nav></header>
 <script>
 // 保留 ?pass= 参数：带 pass 访问时，导航链接自动带上 pass
@@ -248,6 +248,38 @@
     </section>
   </div>
 
+  <div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
+    <section class="auth-dialog" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="auth-head">
+        <div><h2 id="authTitle" data-i18n="authTitle">Log in</h2><p data-i18n="authPasswordIntro">Log in with your email and password on any device.</p></div>
+        <button class="auth-close" id="authClose" type="button" aria-label="Close" data-i18n-aria="authClose"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
+      </div>
+      <form id="authForm" novalidate>
+        <div class="auth-field">
+          <label for="authEmail" data-i18n="authEmailLabel">Email</label>
+          <input id="authEmail" name="email" type="email" required maxlength="240" autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="auth-field" id="authPasswordField">
+          <label for="authPassword" data-i18n="authPasswordLabel">Password</label>
+          <input id="authPassword" name="password" type="password" maxlength="128" autocomplete="current-password" placeholder="••••••••">
+          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
+        </div>
+        <div class="auth-actions"><button class="button button-primary" id="authSubmit" type="submit"><span class="button-label" data-i18n="authSignIn">Log in</span></button></div>
+        <p class="auth-switch" id="authSwitch"><button type="button" id="authSwitchBtn" class="auth-link-btn" data-i18n="authNeedAccount">No account? Sign up</button> · <button type="button" id="authForgotBtn" class="auth-link-btn" data-i18n="authForgotPassword">Forgot password?</button></p>
+        <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
+      </form>
+      <form id="authRecoveryForm" novalidate hidden>
+        <div class="auth-field">
+          <label for="authNewPassword" data-i18n="authNewPasswordLabel">New password</label>
+          <input id="authNewPassword" name="new-password" type="password" maxlength="128" autocomplete="new-password" placeholder="••••••••">
+          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
+        </div>
+        <div class="auth-actions"><button class="button button-primary" id="authRecoverySubmit" type="submit"><span class="button-label" data-i18n="authSetPassword">Set new password</span></button></div>
+        <p class="auth-status" id="authRecoveryStatus" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+
   <script>
     window.pdfReady = import('/vendor/pdf.min.mjs').then(function(pdfjs) {
       window.pdfjsLib = pdfjs;
@@ -257,6 +289,7 @@
     window.pdfReady.catch(function() {});
   </script>
   <script src="/scripts/pdf-engine.js"></script>
+  <script src="/scripts/auth.js"></script>
   <script src="/scripts/pdf-import.js"></script>
   <script>
     /* diff-match-patch compatible word-diff subset. MIT License.
@@ -424,13 +457,229 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       sampleBtn.hidden = !isAdminMode;
       cnSampleBtn.hidden = !isAdminMode;
 
-      function workerFetch(path, options) {
+      async function workerFetch(path, options) {
         var requestOptions = Object.assign({}, options || {});
         var headers = new Headers(requestOptions.headers || {});
         if (adminPass) headers.set('X-Admin-Pass', adminPass);
+        try {
+          if (window.CheckATSAuth) {
+            var token = await window.CheckATSAuth.getAccessToken();
+            if (token) headers.set('Authorization', 'Bearer ' + token);
+          }
+        } catch (e) {}
         requestOptions.headers = headers;
         return fetch(WORKER_ORIGIN + path, requestOptions);
       }
+
+      // ---- Supabase Auth UI (2026-10-23): magic-link login + credits display ----
+      var authArea = document.getElementById('authArea');
+      var authBackdrop = document.getElementById('authBackdrop');
+      var authForm = document.getElementById('authForm');
+      var authEmailInput = document.getElementById('authEmail');
+      var authStatusEl = document.getElementById('authStatus');
+      var authSubmitBtn = document.getElementById('authSubmit');
+      var authPasswordField = document.getElementById('authPasswordField');
+      var authPasswordInput = document.getElementById('authPassword');
+      var authSwitch = document.getElementById('authSwitch');
+      var authSwitchBtn = document.getElementById('authSwitchBtn');
+      var authMode = 'password-signin'; // 'password-signin' | 'password-signup'
+
+      function setAuthMode(mode) {
+        authMode = mode;
+        var isSignup = mode === 'password-signup';
+        var label = authSubmitBtn ? authSubmitBtn.querySelector('.button-label') : null;
+        if (label) {
+          label.textContent = isSignup ? t('authSignUp') : t('authSignIn');
+          label.removeAttribute('data-i18n');
+        }
+        if (authSwitchBtn) {
+          authSwitchBtn.textContent = isSignup ? t('authHaveAccount') : t('authNeedAccount');
+          authSwitchBtn.removeAttribute('data-i18n');
+        }
+        if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
+      }
+      var authCreditsCache = null;
+
+      function truncateEmail(email) {
+        email = String(email || '');
+        if (email.length <= 24) return email;
+        var parts = email.split('@');
+        if (parts.length !== 2) return email.slice(0, 22) + '…';
+        var local = parts[0].length > 12 ? parts[0].slice(0, 11) + '…' : parts[0];
+        return local + '@' + parts[1];
+      }
+
+      function creditsText(n) {
+        n = Number(n);
+        if (!isFinite(n) || n < 0) n = 0;
+        return n === 1 ? t('authCreditsOne') : t('authCredits', { count: n });
+      }
+
+      function renderAuthArea(session, credits) {
+        if (!authArea) return;
+        if (!session) {
+          authArea.innerHTML = '<button class="auth-login-btn" id="authLoginBtn" type="button">' + esc(t('authLogin')) + '</button>';
+          var btn = document.getElementById('authLoginBtn');
+          if (btn) btn.addEventListener('click', openAuthModal);
+          return;
+        }
+        var email = (session.user && session.user.email) || '';
+        var html = '<span class="auth-user" title="' + esc(email) + '"><span class="auth-email">' + esc(truncateEmail(email)) + '</span>';
+        if (credits !== null && credits !== undefined) {
+          html += '<span class="auth-credits">' + esc(creditsText(credits)) + '</span>';
+        }
+        html += '</span><button class="auth-logout-btn" id="authLogoutBtn" type="button" aria-label="' + esc(t('authLogout')) + '">' + esc(t('authLogout')) + '</button>';
+        authArea.innerHTML = html;
+        var out = document.getElementById('authLogoutBtn');
+        if (out) out.addEventListener('click', function () {
+          if (window.CheckATSAuth) window.CheckATSAuth.signOut();
+        });
+      }
+
+      async function refreshAuthState() {
+        if (!window.CheckATSAuth) return;
+        var session = window.CheckATSAuth.getSession();
+        if (!session) { authCreditsCache = null; renderAuthArea(null, null); return; }
+        renderAuthArea(session, authCreditsCache);
+        try {
+          var res = await workerFetch('/api/auth/me', { method: 'GET' });
+          if (res.ok) {
+            var data = await res.json().catch(function () { return null; });
+            if (data && data.ok === true) {
+              authCreditsCache = data.credits;
+              if (data.email && session.user && !session.user.email) session.user.email = data.email;
+              renderAuthArea(session, authCreditsCache);
+            }
+          }
+        } catch (e) {}
+      }
+
+      function openAuthModal() {
+        if (!window.CheckATSAuth || !window.CheckATSAuth.configured()) return; // anon key not set yet
+        if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
+        if (authBackdrop) { authBackdrop.classList.add('active'); authBackdrop.setAttribute('aria-hidden', 'false'); }
+        document.body.classList.add('auth-open');
+        setTimeout(function () { if (authEmailInput) authEmailInput.focus(); }, 60);
+      }
+      function closeAuthModal() {
+        if (authBackdrop) { authBackdrop.classList.remove('active'); authBackdrop.setAttribute('aria-hidden', 'true'); }
+        document.body.classList.remove('auth-open');
+      }
+
+      (function initAuthUI() {
+        if (!window.CheckATSAuth) return;
+        var closeBtn = document.getElementById('authClose');
+        if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
+        if (authBackdrop) authBackdrop.addEventListener('click', function (e) { if (e.target === authBackdrop) closeAuthModal(); });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && authBackdrop && authBackdrop.classList.contains('active')) closeAuthModal();
+        });
+        if (authSwitchBtn) authSwitchBtn.addEventListener('click', function () {
+          setAuthMode(authMode === 'password-signup' ? 'password-signin' : 'password-signup');
+        });
+        var authForgotBtn = document.getElementById('authForgotBtn');
+        if (authForgotBtn) authForgotBtn.addEventListener('click', async function () {
+          if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
+          var email = authEmailInput ? authEmailInput.value.trim() : '';
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (authStatusEl) { authStatusEl.textContent = t('authInvalidEmail'); authStatusEl.classList.add('error'); }
+            return;
+          }
+          authForgotBtn.disabled = true;
+          try {
+            await window.CheckATSAuth.resetPasswordForEmail(email);
+            if (authStatusEl) { authStatusEl.textContent = t('authResetSent'); authStatusEl.classList.add('success'); }
+          } catch (err) {
+            if (authStatusEl) { authStatusEl.textContent = (err && err.message) || t('authFailed'); authStatusEl.classList.add('error'); }
+          } finally {
+            authForgotBtn.disabled = false;
+          }
+        });
+        if (authForm) authForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
+          var email = authEmailInput ? authEmailInput.value.trim() : '';
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (authStatusEl) { authStatusEl.textContent = t('authInvalidEmail'); authStatusEl.classList.add('error'); }
+            return;
+          }
+          var password = authPasswordInput ? authPasswordInput.value : '';
+          if (password.length < 6) {
+            if (authStatusEl) { authStatusEl.textContent = t('authPasswordTooShort'); authStatusEl.classList.add('error'); }
+            return;
+          }
+          if (authSubmitBtn) authSubmitBtn.disabled = true;
+          var label = authSubmitBtn ? authSubmitBtn.querySelector('.button-label') : null;
+          var origLabel = label ? label.textContent : '';
+          if (label) label.textContent = t('authSending');
+          try {
+            if (authMode === 'password-signup') {
+              var res = await window.CheckATSAuth.signUp(email, password);
+              if (res && res.needsConfirmation) {
+                if (authStatusEl) { authStatusEl.textContent = t('authConfirmEmail'); authStatusEl.classList.add('success'); }
+              } else {
+                closeAuthModal();
+              }
+            } else {
+              await window.CheckATSAuth.signInWithPassword(email, password);
+              closeAuthModal();
+            }
+            if (authPasswordInput) authPasswordInput.value = '';
+          } catch (err) {
+            if (authStatusEl) {
+              var msg = t('authFailed');
+              if (err && err.code === 'invalid-email') msg = t('authInvalidEmail');
+              else if (err && err.code === 'password-too-short') msg = t('authPasswordTooShort');
+              else if (err && err.message) msg = err.message;
+              authStatusEl.textContent = msg;
+              authStatusEl.classList.add('error');
+            }
+          } finally {
+            if (authSubmitBtn) authSubmitBtn.disabled = false;
+            if (label) label.textContent = origLabel;
+          }
+        });
+        window.CheckATSAuth.onAuthStateChange(function () { refreshAuthState(); });
+        window.CheckATSAuth.handleRedirectCallback()
+          .catch(function () { /* invalid/expired link: stay logged out */ })
+          .then(function () {
+            refreshAuthState();
+            if (window.CheckATSAuth.isRecoverySession && window.CheckATSAuth.isRecoverySession()) {
+              var rf = document.getElementById('authRecoveryForm');
+              var lf = document.getElementById('authForm');
+              if (rf && lf) {
+                lf.hidden = true; rf.hidden = false;
+                var ttl = document.getElementById('authTitle');
+                if (ttl) { ttl.textContent = t('authSetPassword'); ttl.removeAttribute('data-i18n'); }
+                openAuthModal();
+              }
+            }
+          });
+        var authRecoveryForm = document.getElementById('authRecoveryForm');
+        if (authRecoveryForm) authRecoveryForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var st = document.getElementById('authRecoveryStatus');
+          var np = document.getElementById('authNewPassword');
+          var pw = np ? np.value : '';
+          if (st) { st.textContent = ''; st.className = 'auth-status'; }
+          if (pw.length < 6) {
+            if (st) { st.textContent = t('authPasswordTooShort'); st.classList.add('error'); }
+            return;
+          }
+          try {
+            await window.CheckATSAuth.updatePassword(pw);
+            if (st) { st.textContent = t('authPasswordUpdated'); st.classList.add('success'); }
+            if (np) np.value = '';
+            setTimeout(closeAuthModal, 1200);
+            refreshAuthState();
+          } catch (err) {
+            if (st) { st.textContent = (err && err.message) || t('authFailed'); st.classList.add('error'); }
+          }
+        });
+        document.querySelectorAll('.lang-option').forEach(function (b) {
+          b.addEventListener('click', function () { setTimeout(refreshAuthState, 0); });
+        });
+      })();
 
       var currentLang = 'en';
       var feedbackStatusKey = '';
@@ -477,6 +726,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           researchNote:'<strong>What this ATS simulation measures.</strong> Exact JD words show how closely the resume is tailored; four mechanical raw-text checks flag basic extraction risks without trying to identify resume sections. Vendor documentation describes search and ranking—not one universal ATS formula. <a href="https://docs.oracle.com/en/cloud/saas/taleo-enterprise/25b/otfru/using-recruiting.pdf" target="_blank" rel="noopener noreferrer">Oracle Taleo ↗</a> · <a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ" target="_blank" rel="noopener noreferrer">Greenhouse ↗</a>',
           footerCopy:'ATS checks stay local. AI Deep Review and AI Rewrite send the resume and job description to the Cloudflare Worker only when requested; the DeepSeek key stays on the server. Results are guidance, not a guarantee of hiring outcomes.', backTop:'Back to top',
           feedbackTrigger:'Feedback', feedbackTitle:'Share feedback', feedbackIntro:'Tell us what would make this tool more useful.', feedbackClose:'Close feedback', feedbackTypeLabel:'Type', feedbackTypeSuggestion:'Suggestion', feedbackTypeProblem:'Something went wrong', feedbackTypeOther:'Other', feedbackMessageLabel:'Feedback', feedbackMessagePlaceholder:'What should we improve?', feedbackContactLabel:'Contact (optional)', feedbackContactPlaceholder:'Email or another way to reach you', feedbackSubmit:'Send feedback', feedbackSending:'Sending…', feedbackRequired:'Please enter your feedback.', feedbackSuccess:'Thanks — your feedback was sent.', feedbackFailed:'Feedback could not be sent. Please try again.',
+          authTitle:'Log in', authIntro:'We’ll email you a sign-in link. No password needed.', authClose:'Close', authEmailLabel:'Email', authSendLink:'Send sign-in link', authSending:'Sending…', authCheckEmail:'Sign-in link sent — check your inbox.', authFailed:'Couldn’t send the link. Please try again.', authInvalidEmail:'Enter a valid email address.', authLogin:'Log in', authLogout:'Log out', authCredits:'{count} credits', authCreditsOne:'1 credit',
+          authTabLink:'Magic link', authTabPassword:'Password', authPasswordLabel:'Password', authPasswordHint:'At least 6 characters. Passwords are hashed — we never see them.', authPasswordIntro:'Log in with your email and password on any device.', authSignIn:'Log in', authSignUp:'Sign up', authNeedAccount:'No account? Sign up', authHaveAccount:'Have an account? Log in', authPasswordTooShort:'Password must be at least 6 characters.', authConfirmEmail:'Account created — check your email to confirm, then log in.',authForgotPassword:'Forgot password?',authResetSent:'Password reset email sent — check your inbox.',authNewPasswordLabel:'New password',authSetPassword:'Set new password',authPasswordUpdated:'Password updated — you are logged in.',
           wordCount:'{count} words', sampleLoaded:'English sample loaded. Run the ATS scan.', cnSampleLoaded:'Chinese sample loaded. Run the ATS scan.', minimumText:'Add at least 50 resume words or characters and 30 job-description words or characters to run a useful scan.', analysisComplete:'Analysis complete. Simulated ATS score {ats}/100. Run AI Deep Review for the HR lens.',
           choosePdf:'Choose a PDF file.', pdfUnavailable:'PDF reader could not load. Paste the resume text instead.', readingPdf:'Reading PDF…', extractingPdf:'Extracting text from {name}…', pdfExtracted:'PDF text extracted from {pages} {pageWord}.', page:'page', pages:'pages', pdfFailed:'We could not read text from this PDF. It may be image-only; paste the text instead.',
           scoreOutOf:'out of 100', compatibility:'ATS PASSING SCORE', simulationLabel:'SIMULATED · NOT A REAL ATS SCORE', atsLens:'ATS passing score', atsLensNote:'60% JD exact-word coverage + 40% raw-text parseability.', parseability:'Parseability', parseabilityWeight:'40% weight', parseContact:'Contact info extractable', parseDates:'Consistent date format', parseGarbled:'No garbled text', parseLength:'Reasonable text length', parsePass:'Pass', parseImprove:'Improve', parseContactEmailPhone:'Email found · phone also found', parseContactEmail:'Email found · phone not found (optional)', parseContactMissing:'No email address found', parseDatesPass:'{count} dates · one format', parseDatesMixed:'{count} dates · mixed formats', parseDatesFew:'Only one supported month date found', parseDatesMissing:'No supported month dates found', parseGarbledPass:'Text appears clean', parseGarbledFail:'Replacement, private-use, or excessive symbol characters found', parseLengthDetail:'{count} non-space characters', parseabilityTip:'Pasted text cannot show the original file layout. Multi-column layouts, tables, text boxes, and image-only PDFs can cause real ATS parsers to lose content—confirm that the original file is a single-column, text-based resume.', hrLens:'HR impression', hrLensNote:'AI lens: language, results, specificity, and role alignment.', hrReviewTitle:'HR Impression · AI Review', hrReviewButton:'AI Deep Review', hrReviewCaption:'Four-dimension review of the full resume · Internet required · About 10–30 seconds', hrReviewLoading:'AI is reviewing the full resume…', hrReviewDimensions:'Four dimensions', hrDimensionExpression:'Writing strength', hrDimensionResults:'Quantification & results', hrDimensionSpecificity:'Experience specificity', hrDimensionMatch:'Role alignment', hrReviewEvidence:'Original: {evidence}', hrReviewOverall:'Overall review', hrReviewModel:'Model: {model} · Within free quota', hrReviewLimit:'Today’s free reviews are used up. Come back tomorrow.', hrReviewFailed:'AI review failed. Please try again.', hrReviewBadResponse:'The AI review returned an unreadable response. Please try again.', exactCoverageCount:'Hit {matched} / {total} exact JD words', knockoutTitle:'Application-form knockout questions are separate', knockoutCopy:'Work authorization, location, licence, and minimum-requirement answers can trigger employer-configured rejection. Resume wording cannot repair those answers.', excellent:'Excellent', excellentNote:'Strong keyword alignment. Make the final pass role-specific.', good:'Good match', goodNote:'Competitive JD exact-word coverage with a few clear gaps to close.', needsWork:'Needs work', needsWorkNote:'Several important job-description terms are still missing.', atRisk:'At risk', atRiskNote:'JD exact-word coverage is low for this target role.',
@@ -513,6 +764,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           researchNote:'<strong>这个 ATS 模拟分看什么？</strong> JD 原词反映简历针对岗位的定向程度；四项纯文本机械检查提示基础解析风险，但不会识别或猜测简历板块。厂商文档描述的是搜索与排序，而非统一的 ATS 公式。<a href="https://docs.oracle.com/en/cloud/saas/taleo-enterprise/25b/otfru/using-recruiting.pdf" target="_blank" rel="noopener noreferrer">Oracle Taleo ↗</a> · <a href="https://support.greenhouse.io/hc/en-us/articles/41131886674075-Talent-Matching-FAQ" target="_blank" rel="noopener noreferrer">Greenhouse ↗</a>',
           footerCopy:'ATS 检查留在本地。仅当你主动请求 AI 深度点评或 AI 改写时，简历和职位描述才会发送到 Cloudflare Worker。结果仅供参考，不保证获得面试或录用。', backTop:'返回顶部',
           feedbackTrigger:'反馈', feedbackTitle:'提交反馈', feedbackIntro:'告诉我们怎样让这个工具更好用。', feedbackClose:'关闭反馈', feedbackTypeLabel:'类型', feedbackTypeSuggestion:'建议', feedbackTypeProblem:'遇到问题', feedbackTypeOther:'其他', feedbackMessageLabel:'反馈内容', feedbackMessagePlaceholder:'请告诉我们哪里需要改进', feedbackContactLabel:'联系方式（选填）', feedbackContactPlaceholder:'邮箱或其他联系方式', feedbackSubmit:'提交反馈', feedbackSending:'提交中…', feedbackRequired:'请填写反馈内容。', feedbackSuccess:'谢谢，反馈已提交。', feedbackFailed:'反馈提交失败，请稍后重试。',
+          authTitle:'登录', authIntro:'我们会给你发一封登录链接邮件，无需密码。', authClose:'关闭', authEmailLabel:'邮箱', authSendLink:'发送登录链接', authSending:'发送中…', authCheckEmail:'登录链接已发送，请查收邮件。', authFailed:'发送失败，请重试。', authInvalidEmail:'请输入有效的邮箱地址。', authLogin:'登录', authLogout:'退出', authCredits:'{count} 次', authCreditsOne:'1 次',
+          authTabLink:'邮件链接', authTabPassword:'密码', authPasswordLabel:'密码', authPasswordHint:'至少 6 位。密码经哈希存储，我们看不到明文。', authPasswordIntro:'用邮箱+密码在任何设备上登录。', authSignIn:'登录', authSignUp:'注册', authNeedAccount:'没有账号？去注册', authHaveAccount:'已有账号？去登录', authPasswordTooShort:'密码至少 6 位。', authConfirmEmail:'账号已创建，请查收邮件确认后再登录。',authForgotPassword:'忘记密码？',authResetSent:'重置邮件已发送，请查收邮箱。',authNewPasswordLabel:'新密码',authSetPassword:'设置新密码',authPasswordUpdated:'密码已更新，你已登录。',
           wordCount:'{count} 个词', sampleLoaded:'英文示例已加载，可以运行 ATS 扫描。', cnSampleLoaded:'中文示例已加载，可以运行 ATS 扫描。', minimumText:'简历内容至少需要 50 个词或汉字，职位描述至少需要 30 个词或汉字，才能进行有效扫描。', analysisComplete:'分析完成：ATS 模拟通过率 {ats}/100。点击 AI 深度点评查看 HR 维度。',
           choosePdf:'请选择 PDF 文件。', pdfUnavailable:'PDF 读取器加载失败，请直接粘贴简历文本。', readingPdf:'正在读取 PDF…', extractingPdf:'正在从 {name} 提取文本…', pdfExtracted:'已从 {pages} {pageWord} PDF 中提取文本。', page:'页', pages:'页', pdfFailed:'无法读取此 PDF 的文字。它可能只有图片，请改为粘贴文本。',
           scoreOutOf:'满分 100', compatibility:'ATS 通过率', simulationLabel:'模拟分 · 非真实 ATS 分数', atsLens:'ATS 通过率', atsLensNote:'JD 原词覆盖 60% + 纯文本可解析性 40%。', parseability:'可解析性', parseabilityWeight:'权重 40%', parseContact:'联系方式可提取', parseDates:'日期规范一致', parseGarbled:'无乱码', parseLength:'文本体量合理', parsePass:'通过', parseImprove:'建议优化', parseContactEmailPhone:'已识别邮箱 · 同时识别到电话', parseContactEmail:'已识别邮箱 · 未识别电话（不影响通过）', parseContactMissing:'未识别到邮箱', parseDatesPass:'识别到 {count} 个日期 · 格式一致', parseDatesMixed:'识别到 {count} 个日期 · 格式混用', parseDatesFew:'只识别到 1 个支持的年月日期', parseDatesMissing:'未识别到支持的年月日期', parseGarbledPass:'文本未见明显乱码', parseGarbledFail:'检测到替换字符、私用区字符或过多符号', parseLengthDetail:'{count} 个非空白字符', parseabilityTip:'粘贴文本无法反映原文件版式。多栏、表格、文本框、图片型 PDF 会导致真实 ATS 解析丢失内容——请确认原文件为单栏文本型简历。', hrLens:'HR 阅读印象', hrLensNote:'AI 维度：表达、结果、具体性和岗位匹配。', hrReviewTitle:'HR 阅读印象 · AI 点评', hrReviewButton:'AI 深度点评', hrReviewCaption:'基于整份简历的四维评分 · 需联网 · 约10-30秒', hrReviewLoading:'AI 正在阅读整份简历…', hrReviewDimensions:'四项维度', hrDimensionExpression:'表达力度', hrDimensionResults:'量化与结果', hrDimensionSpecificity:'经历具体性', hrDimensionMatch:'岗位匹配度', hrReviewEvidence:'原文：{evidence}', hrReviewOverall:'总评', hrReviewModel:'模型：{model} · 免费额度内', hrReviewLimit:'今日免费点评次数已用完，明天再来', hrReviewFailed:'AI 点评失败，请稍后重试。', hrReviewBadResponse:'AI 点评返回内容无法读取，请重试。', exactCoverageCount:'命中 {matched} / {total}', knockoutTitle:'申请表淘汰题不在本分数内', knockoutCopy:'工作授权、地点、执照和最低要求等答案可能触发雇主配置的自动淘汰；简历措辞无法弥补这些答案。', excellent:'非常匹配', excellentNote:'关键词匹配度很强，再做一轮岗位定向润色即可。', good:'匹配良好', goodNote:'关键词基础有竞争力，还有几个明确缺口可以补足。', needsWork:'需要优化', needsWorkNote:'还有若干重要职位关键词尚未覆盖。', atRisk:'风险较高', atRiskNote:'这份简历对目标岗位的关键词覆盖偏低。',

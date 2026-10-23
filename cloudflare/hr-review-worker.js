@@ -49,7 +49,7 @@ return "你是资深 HR。从四个维度给简历打分（0-100整数）：1)�
 const CORS = {
 "Access-Control-Allow-Origin": "*",
 "Access-Control-Allow-Methods": "POST, OPTIONS",
-"Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass",
+"Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, Authorization",
 };
 
 const DAILY_LIMIT = 5; // 每 IP 每天 5 次深度点评（Workers AI 免费额度）
@@ -68,6 +68,183 @@ return !!(env.ADMIN_PASS && pass && pass === env.ADMIN_PASS);
 
 function isValidEmail(s) {
 return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || "");
+}
+
+// ============ Supabase Auth + D1 credits (2026-10-23) ============
+// D1 users 表：id = Supabase auth user UUID，credits = 剩余 AI 次数。
+// 新用户默认 0 credits；免费每日 IP 限额逻辑保持不变。
+async function ensureUsersTable(env) {
+if (!env.DB) return;
+await env.DB.prepare(
+"CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL, credits INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')))"
+).run();
+}
+
+function b64urlDecode(s) {
+s = String(s || "").replace(/-/g, "+").replace(/_/g, "/");
+const pad = s.length % 4;
+if (pad) s += "=".repeat(4 - pad);
+const bin = atob(s);
+const bytes = new Uint8Array(bin.length);
+for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+return bytes;
+}
+
+// JWKS 缓存（模块级，跨请求复用；kid 找不到时刷新一次）
+let jwksCache = null;
+let jwksCacheAt = 0;
+async function getSupabaseJwks(env) {
+const now = Date.now();
+if (jwksCache && now - jwksCacheAt < 3600000) return jwksCache;
+const r = await fetch(env.SUPABASE_URL + "/auth/v1/.well-known/jwks.json");
+if (!r.ok) throw new Error("jwks fetch failed: " + r.status);
+jwksCache = await r.json();
+jwksCacheAt = now;
+return jwksCache;
+}
+
+// 验证 Supabase JWT（RS256）。成功返回 {id, email}，失败返回 null。
+async function verifySupabaseJWT(token, env) {
+try {
+if (!token || !env.SUPABASE_URL) return null;
+const parts = token.split(".");
+if (parts.length !== 3) return null;
+const dec = new TextDecoder();
+const header = JSON.parse(dec.decode(b64urlDecode(parts[0])));
+const payload = JSON.parse(dec.decode(b64urlDecode(parts[1])));
+if (header.alg !== "RS256" || !header.kid) return null;
+const nowSec = Math.floor(Date.now() / 1000);
+if (typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
+if (payload.aud !== "authenticated") return null;
+if (!String(payload.iss || "").startsWith(env.SUPABASE_URL)) return null;
+if (!payload.sub) return null;
+let jwks = await getSupabaseJwks(env);
+let jwk = (jwks.keys || []).find((k) => k.kid === header.kid);
+if (!jwk) {
+// kid 对不上：刷新一次 JWKS 再试（Supabase 轮换密钥时）
+jwksCache = null;
+jwks = await getSupabaseJwks(env);
+jwk = (jwks.keys || []).find((k) => k.kid === header.kid);
+if (!jwk) return null;
+}
+const key = await crypto.subtle.importKey(
+"jwk",
+{ kty: jwk.kty, n: jwk.n, e: jwk.e },
+{ name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+false,
+["verify"]
+);
+const data = new TextEncoder().encode(parts[0] + "." + parts[1]);
+const sig = b64urlDecode(parts[2]);
+const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, sig, data);
+if (!ok) return null;
+return { id: payload.sub, email: typeof payload.email === "string" ? payload.email : "" };
+} catch {
+return null;
+}
+}
+
+// 从 Authorization: Bearer <token> 解析登录用户；无 token 或无效返回 null。
+async function getAuthUser(request, env) {
+const h = request.headers.get("Authorization") || "";
+const m = h.match(/^Bearer\s+(.+)$/i);
+if (!m) return null;
+return verifySupabaseJWT(m[1].trim(), env);
+}
+
+// 原子扣 1 credit；成功返回 true（已扣），余额不足返回 false。
+async function trySpendCredit(env, userId) {
+const r = await env.DB.prepare(
+"UPDATE users SET credits = credits - 1 WHERE id = ? AND credits > 0"
+).bind(userId).run();
+return !!(r && r.meta && r.meta.changes > 0);
+}
+
+// AI 接口配额检查（点评/改写共用）：
+// - 管理员（pass）：直接放行
+// - 登录用户且 credits > 0：扣 1 credit 放行（跳过 IP 限流）
+// - 登录用户但 credits == 0，或匿名：走原有 IP 每日限流
+// 返回 null = 放行；返回 "limited" = 触发 IP 每日限额。
+async function checkAiQuota(request, env, kind, dailyLimit) {
+if (isAdminRequest(request, env)) return null;
+const hasAuthHeader = !!(request.headers.get("Authorization") || "").trim();
+if (hasAuthHeader && env.DB && env.SUPABASE_URL) {
+const user = await getAuthUser(request, env);
+if (user) {
+await ensureUsersTable(env);
+await env.DB.prepare(
+"INSERT OR IGNORE INTO users (id, email, credits) VALUES (?, ?, 0)"
+).bind(user.id, user.email || "").run();
+if (await trySpendCredit(env, user.id)) return null;
+// credits 用完：继续走 IP 免费限额
+}
+}
+const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+if (await kvRateLimited(env, kind, ip, dailyLimit)) return "limited";
+return null;
+}
+
+// GET /api/auth/me：登录用户查自己的 id/email/credits（新用户自动建行，0 credits）。
+async function handleAuthMe(request, env) {
+if (request.method !== "GET") {
+return Response.json({ ok: false, error: "Method not allowed" }, { status: 405, headers: CORS });
+}
+const user = await getAuthUser(request, env);
+if (!user) {
+return Response.json({ ok: false, error: "Unauthorized" }, { status: 401, headers: CORS });
+}
+if (!env.DB) {
+return Response.json({ ok: false, error: "DB not configured" }, { status: 500, headers: CORS });
+}
+await ensureUsersTable(env);
+await env.DB.prepare(
+"INSERT OR IGNORE INTO users (id, email, credits) VALUES (?, ?, 0)"
+).bind(user.id, user.email || "").run();
+if (user.email) {
+await env.DB.prepare("UPDATE users SET email = ? WHERE id = ?").bind(user.email, user.id).run();
+}
+const row = await env.DB.prepare(
+"SELECT id, email, credits FROM users WHERE id = ?"
+).bind(user.id).first();
+return Response.json(
+{ ok: true, id: row.id, email: row.email, credits: row.credits },
+{ headers: CORS }
+);
+}
+
+// POST /api/credits/add：管理员给用户加 credits（测试 + 未来 Creem webhook 用）。
+// body: { user_id, amount }
+async function handleCreditsAdd(request, env) {
+if (request.method !== "POST") {
+return Response.json({ ok: false, error: "Method not allowed" }, { status: 405, headers: CORS });
+}
+if (!isAdminRequest(request, env)) {
+return new Response("Forbidden", { status: 403, headers: CORS });
+}
+if (!env.DB) {
+return Response.json({ ok: false, error: "DB not configured" }, { status: 500, headers: CORS });
+}
+let body;
+try { body = await request.json(); } catch {
+return Response.json({ ok: false, error: "Bad request" }, { status: 400, headers: CORS });
+}
+const userId = String(body.user_id || "").trim();
+const amount = Math.trunc(Number(body.amount));
+if (!userId || !isFinite(amount) || amount === 0) {
+return Response.json({ ok: false, error: "user_id and non-zero amount required" }, { status: 400, headers: CORS });
+}
+await ensureUsersTable(env);
+await env.DB.prepare(
+"INSERT OR IGNORE INTO users (id, email, credits) VALUES (?, '', 0)"
+).bind(userId).run();
+await env.DB.prepare(
+"UPDATE users SET credits = credits + ? WHERE id = ?"
+).bind(amount, userId).run();
+const row = await env.DB.prepare("SELECT credits FROM users WHERE id = ?").bind(userId).first();
+return Response.json(
+{ ok: true, user_id: userId, credits: row ? row.credits : 0 },
+{ headers: CORS }
+);
 }
 
 // POST /api/send-email：把优化版简历发到用户邮箱（经 Resend）。
@@ -339,8 +516,7 @@ return Response.json(
 { status: 500, headers: CORS }
 );
 }
-const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-if (!isAdminRequest(request, env) && await kvRateLimited(env, "rewrite", ip, REWRITE_DAILY_LIMIT)) {
+if (await checkAiQuota(request, env, "rewrite", REWRITE_DAILY_LIMIT) === "limited") {
 return Response.json(
 { ok: false, error: "今日 AI 改写次数已用完，明天再来 / Daily rewrite limit reached" },
 { status: 429, headers: CORS }
@@ -491,6 +667,12 @@ return handleSendEmail(request, env);
 if (url.pathname === "/api/feedback") {
 return handleFeedback(request, env);
 }
+if (url.pathname === "/api/auth/me") {
+return handleAuthMe(request, env);
+}
+if (url.pathname === "/api/credits/add") {
+return handleCreditsAdd(request, env);
+}
 if (url.pathname === "/admin/feedback") {
 return handleFeedbackAdmin(request, env);
 }
@@ -504,8 +686,7 @@ return Response.json(
 );
 }
 
-const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-if (!isAdminRequest(request, env) && await kvRateLimited(env, "review", ip, DAILY_LIMIT)) {
+if (await checkAiQuota(request, env, "review", DAILY_LIMIT) === "limited") {
 return Response.json(
 { ok: false, error: "今日深度点评次数已用完，明天再来 / Daily limit reached"},
 { status: 429, headers: CORS}
