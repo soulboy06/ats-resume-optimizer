@@ -248,37 +248,7 @@
     </section>
   </div>
 
-  <div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
-    <section class="auth-dialog" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <div class="auth-head">
-        <div><h2 id="authTitle" data-i18n="authTitle">Log in</h2><p data-i18n="authPasswordIntro">Log in with your email and password on any device.</p></div>
-        <button class="auth-close" id="authClose" type="button" aria-label="Close" data-i18n-aria="authClose"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
-      </div>
-      <form id="authForm" novalidate>
-        <div class="auth-field">
-          <label for="authEmail" data-i18n="authEmailLabel">Email</label>
-          <input id="authEmail" name="email" type="email" required maxlength="240" autocomplete="email" placeholder="you@example.com">
-        </div>
-        <div class="auth-field" id="authPasswordField">
-          <label for="authPassword" data-i18n="authPasswordLabel">Password</label>
-          <input id="authPassword" name="password" type="password" maxlength="128" autocomplete="current-password" placeholder="••••••••">
-          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
-        </div>
-        <div class="auth-actions"><button class="button button-primary" id="authSubmit" type="submit"><span class="button-label" data-i18n="authSignIn">Log in</span></button></div>
-        <p class="auth-switch" id="authSwitch"><button type="button" id="authSwitchBtn" class="auth-link-btn" data-i18n="authNeedAccount">No account? Sign up</button> · <button type="button" id="authForgotBtn" class="auth-link-btn" data-i18n="authForgotPassword">Forgot password?</button></p>
-        <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
-      </form>
-      <form id="authRecoveryForm" novalidate hidden>
-        <div class="auth-field">
-          <label for="authNewPassword" data-i18n="authNewPasswordLabel">New password</label>
-          <input id="authNewPassword" name="new-password" type="password" maxlength="128" autocomplete="new-password" placeholder="••••••••">
-          <p class="auth-hint" data-i18n="authPasswordHint">At least 6 characters. Passwords are hashed — we never see them.</p>
-        </div>
-        <div class="auth-actions"><button class="button button-primary" id="authRecoverySubmit" type="submit"><span class="button-label" data-i18n="authSetPassword">Set new password</span></button></div>
-        <p class="auth-status" id="authRecoveryStatus" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-  </div>
+  <div class="auth-backdrop" id="authBackdrop" aria-hidden="true"><section class="auth-dialog" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle"></section></div>
 
   <script>
     window.pdfReady = import('/vendor/pdf.min.mjs').then(function(pdfjs) {
@@ -290,6 +260,7 @@
   </script>
   <script src="/scripts/pdf-engine.js"></script>
   <script src="/scripts/auth.js"></script>
+  <script src="/scripts/auth-ui.js"></script>
   <script src="/scripts/pdf-import.js"></script>
   <script>
     /* diff-match-patch compatible word-diff subset. MIT License.
@@ -471,215 +442,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         return fetch(WORKER_ORIGIN + path, requestOptions);
       }
 
-      // ---- Supabase Auth UI (2026-10-23): magic-link login + credits display ----
-      var authArea = document.getElementById('authArea');
-      var authBackdrop = document.getElementById('authBackdrop');
-      var authForm = document.getElementById('authForm');
-      var authEmailInput = document.getElementById('authEmail');
-      var authStatusEl = document.getElementById('authStatus');
-      var authSubmitBtn = document.getElementById('authSubmit');
-      var authPasswordField = document.getElementById('authPasswordField');
-      var authPasswordInput = document.getElementById('authPassword');
-      var authSwitch = document.getElementById('authSwitch');
-      var authSwitchBtn = document.getElementById('authSwitchBtn');
-      var authMode = 'password-signin'; // 'password-signin' | 'password-signup'
-
-      function setAuthMode(mode) {
-        authMode = mode;
-        var isSignup = mode === 'password-signup';
-        var label = authSubmitBtn ? authSubmitBtn.querySelector('.button-label') : null;
-        if (label) {
-          label.textContent = isSignup ? t('authSignUp') : t('authSignIn');
-          label.removeAttribute('data-i18n');
-        }
-        if (authSwitchBtn) {
-          authSwitchBtn.textContent = isSignup ? t('authHaveAccount') : t('authNeedAccount');
-          authSwitchBtn.removeAttribute('data-i18n');
-        }
-        if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
-      }
-      var authCreditsCache = null;
-
-      function truncateEmail(email) {
-        email = String(email || '');
-        if (email.length <= 24) return email;
-        var parts = email.split('@');
-        if (parts.length !== 2) return email.slice(0, 22) + '…';
-        var local = parts[0].length > 12 ? parts[0].slice(0, 11) + '…' : parts[0];
-        return local + '@' + parts[1];
-      }
-
-      function creditsText(n) {
-        n = Number(n);
-        if (!isFinite(n) || n < 0) n = 0;
-        return n === 1 ? t('authCreditsOne') : t('authCredits', { count: n });
-      }
-
-      function renderAuthArea(session, credits) {
-        if (!authArea) return;
-        if (!session) {
-          authArea.innerHTML = '<button class="auth-login-btn" id="authLoginBtn" type="button">' + esc(t('authLogin')) + '</button>';
-          var btn = document.getElementById('authLoginBtn');
-          if (btn) btn.addEventListener('click', openAuthModal);
-          return;
-        }
-        var email = (session.user && session.user.email) || '';
-        var html = '<span class="auth-user" title="' + esc(email) + '"><span class="auth-email">' + esc(truncateEmail(email)) + '</span>';
-        if (credits !== null && credits !== undefined) {
-          html += '<span class="auth-credits">' + esc(creditsText(credits)) + '</span>';
-        }
-        html += '</span><button class="auth-logout-btn" id="authLogoutBtn" type="button" aria-label="' + esc(t('authLogout')) + '">' + esc(t('authLogout')) + '</button>';
-        authArea.innerHTML = html;
-        var out = document.getElementById('authLogoutBtn');
-        if (out) out.addEventListener('click', function () {
-          if (window.CheckATSAuth) window.CheckATSAuth.signOut();
-        });
-      }
-
-      async function refreshAuthState() {
-        if (!window.CheckATSAuth) return;
-        var session = window.CheckATSAuth.getSession();
-        if (!session) { authCreditsCache = null; renderAuthArea(null, null); return; }
-        renderAuthArea(session, authCreditsCache);
-        try {
-          var res = await workerFetch('/api/auth/me', { method: 'GET' });
-          if (res.ok) {
-            var data = await res.json().catch(function () { return null; });
-            if (data && data.ok === true) {
-              authCreditsCache = data.credits;
-              if (data.email && session.user && !session.user.email) session.user.email = data.email;
-              renderAuthArea(session, authCreditsCache);
-            }
-          }
-        } catch (e) {}
-      }
-
-      function openAuthModal() {
-        if (!window.CheckATSAuth || !window.CheckATSAuth.configured()) return; // anon key not set yet
-        if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
-        if (authBackdrop) { authBackdrop.classList.add('active'); authBackdrop.setAttribute('aria-hidden', 'false'); }
-        document.body.classList.add('auth-open');
-        setTimeout(function () { if (authEmailInput) authEmailInput.focus(); }, 60);
-      }
-      function closeAuthModal() {
-        if (authBackdrop) { authBackdrop.classList.remove('active'); authBackdrop.setAttribute('aria-hidden', 'true'); }
-        document.body.classList.remove('auth-open');
-      }
-
-      (function initAuthUI() {
-        if (!window.CheckATSAuth) return;
-        var closeBtn = document.getElementById('authClose');
-        if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
-        if (authBackdrop) authBackdrop.addEventListener('click', function (e) { if (e.target === authBackdrop) closeAuthModal(); });
-        document.addEventListener('keydown', function (e) {
-          if (e.key === 'Escape' && authBackdrop && authBackdrop.classList.contains('active')) closeAuthModal();
-        });
-        if (authSwitchBtn) authSwitchBtn.addEventListener('click', function () {
-          setAuthMode(authMode === 'password-signup' ? 'password-signin' : 'password-signup');
-        });
-        var authForgotBtn = document.getElementById('authForgotBtn');
-        if (authForgotBtn) authForgotBtn.addEventListener('click', async function () {
-          if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
-          var email = authEmailInput ? authEmailInput.value.trim() : '';
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            if (authStatusEl) { authStatusEl.textContent = t('authInvalidEmail'); authStatusEl.classList.add('error'); }
-            return;
-          }
-          authForgotBtn.disabled = true;
-          try {
-            await window.CheckATSAuth.resetPasswordForEmail(email);
-            if (authStatusEl) { authStatusEl.textContent = t('authResetSent'); authStatusEl.classList.add('success'); }
-          } catch (err) {
-            if (authStatusEl) { authStatusEl.textContent = (err && err.message) || t('authFailed'); authStatusEl.classList.add('error'); }
-          } finally {
-            authForgotBtn.disabled = false;
-          }
-        });
-        if (authForm) authForm.addEventListener('submit', async function (e) {
-          e.preventDefault();
-          if (authStatusEl) { authStatusEl.textContent = ''; authStatusEl.className = 'auth-status'; }
-          var email = authEmailInput ? authEmailInput.value.trim() : '';
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            if (authStatusEl) { authStatusEl.textContent = t('authInvalidEmail'); authStatusEl.classList.add('error'); }
-            return;
-          }
-          var password = authPasswordInput ? authPasswordInput.value : '';
-          if (password.length < 6) {
-            if (authStatusEl) { authStatusEl.textContent = t('authPasswordTooShort'); authStatusEl.classList.add('error'); }
-            return;
-          }
-          if (authSubmitBtn) authSubmitBtn.disabled = true;
-          var label = authSubmitBtn ? authSubmitBtn.querySelector('.button-label') : null;
-          var origLabel = label ? label.textContent : '';
-          if (label) label.textContent = t('authSending');
-          try {
-            if (authMode === 'password-signup') {
-              var res = await window.CheckATSAuth.signUp(email, password);
-              if (res && res.needsConfirmation) {
-                if (authStatusEl) { authStatusEl.textContent = t('authConfirmEmail'); authStatusEl.classList.add('success'); }
-              } else {
-                closeAuthModal();
-              }
-            } else {
-              await window.CheckATSAuth.signInWithPassword(email, password);
-              closeAuthModal();
-            }
-            if (authPasswordInput) authPasswordInput.value = '';
-          } catch (err) {
-            if (authStatusEl) {
-              var msg = t('authFailed');
-              if (err && err.code === 'invalid-email') msg = t('authInvalidEmail');
-              else if (err && err.code === 'password-too-short') msg = t('authPasswordTooShort');
-              else if (err && err.message) msg = err.message;
-              authStatusEl.textContent = msg;
-              authStatusEl.classList.add('error');
-            }
-          } finally {
-            if (authSubmitBtn) authSubmitBtn.disabled = false;
-            if (label) label.textContent = origLabel;
-          }
-        });
-        window.CheckATSAuth.onAuthStateChange(function () { refreshAuthState(); });
-        window.CheckATSAuth.handleRedirectCallback()
-          .catch(function () { /* invalid/expired link: stay logged out */ })
-          .then(function () {
-            refreshAuthState();
-            if (window.CheckATSAuth.isRecoverySession && window.CheckATSAuth.isRecoverySession()) {
-              var rf = document.getElementById('authRecoveryForm');
-              var lf = document.getElementById('authForm');
-              if (rf && lf) {
-                lf.hidden = true; rf.hidden = false;
-                var ttl = document.getElementById('authTitle');
-                if (ttl) { ttl.textContent = t('authSetPassword'); ttl.removeAttribute('data-i18n'); }
-                openAuthModal();
-              }
-            }
-          });
-        var authRecoveryForm = document.getElementById('authRecoveryForm');
-        if (authRecoveryForm) authRecoveryForm.addEventListener('submit', async function (e) {
-          e.preventDefault();
-          var st = document.getElementById('authRecoveryStatus');
-          var np = document.getElementById('authNewPassword');
-          var pw = np ? np.value : '';
-          if (st) { st.textContent = ''; st.className = 'auth-status'; }
-          if (pw.length < 6) {
-            if (st) { st.textContent = t('authPasswordTooShort'); st.classList.add('error'); }
-            return;
-          }
-          try {
-            await window.CheckATSAuth.updatePassword(pw);
-            if (st) { st.textContent = t('authPasswordUpdated'); st.classList.add('success'); }
-            if (np) np.value = '';
-            setTimeout(closeAuthModal, 1200);
-            refreshAuthState();
-          } catch (err) {
-            if (st) { st.textContent = (err && err.message) || t('authFailed'); st.classList.add('error'); }
-          }
-        });
-        document.querySelectorAll('.lang-option').forEach(function (b) {
-          b.addEventListener('click', function () { setTimeout(refreshAuthState, 0); });
-        });
-      })();
+      var authUI = null;
 
       var currentLang = 'en';
       var feedbackStatusKey = '';
@@ -810,6 +573,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         if (lastMessage) setMessageKey(lastMessage.key, lastMessage.vars, lastMessage.isError);
         if (lastAnalysis) renderResults(lastAnalysis, lastResume, false);
         window.resumePdf.setLanguage(currentLang);
+        if (authUI) authUI.refresh();
       }
 
       document.querySelectorAll('.lang-option').forEach(function(btn){
@@ -1662,6 +1426,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       });
 
       applyLanguage(new URLSearchParams(window.location.search).get('lang') === 'zh' ? 'zh' : 'en');
+      authUI = window.CheckATSAuthUI.mount({language:function(){return currentLang;},request:workerFetch});
       updateCounts();
     })();
   </script>

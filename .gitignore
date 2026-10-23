@@ -14,3 +14,4 @@ report.json
 __pycache__/
 output/playwright/
 tmp/pdfs/
+tmp/auth-email-backup.json
