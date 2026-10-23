@@ -4,7 +4,7 @@ const source=fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/
 const resume='Alex Example\nalex@example.com\nhttps://alex.example.com\nSoftware Engineer\nBuilt Python services handling 18000 events daily.\nSkills: Python, SQL';
 const jd='Python developer building reliable SQL services.';
 const base=()=>({resume,jd,missing:['Python','SQL'],lang:'en'});
-const goodReview=()=>({dimensions:Array.from({length:4},()=>({score:68,comment:'Specific engineering experience; clarify the business impact.',evidence:'Built Python services'})),overall:'The resume shows concrete engineering experience. Explain the business impact more clearly.'});
+const goodReview=()=>({dimensions:Array.from({length:4},()=>({score:68,comment:'Specific engineering experience; clarify the business impact.'})),overall:'The resume shows concrete engineering experience. Explain the business impact more clearly.'});
 function setup(options={}){
  const calls={review:[],rewrite:[]};
  const env={ADMIN_PASS:'synthetic-admin-pass',DEEPSEEK_API_KEY:'synthetic-provider-secret',RESEND_API_KEY:'synthetic-email-secret',AI:{run:async(model,params)=>{
@@ -38,8 +38,7 @@ test('both AI routes accept normal resumes, including security work, with fixed 
    assert.ok(!messages[0].content.includes(input.resume));
    assert.doesNotMatch(JSON.stringify(messages),/synthetic-(?:admin|provider|email)/);
   }
-  const reviewResume=JSON.parse(app.calls.review[0].messages[1].content).untrustedDocumentData.resume;
-  assert.ok(reviewResume.includes('[1]'));
+  assert.equal(JSON.parse(app.calls.review[0].messages[1].content).untrustedDocumentData.resume,input.resume);
   assert.equal(JSON.parse(app.calls.rewrite[0].messages[1].content).untrustedDocumentData.resume,input.resume);
   assert.equal(app.calls.rewrite[0].response_format.type,'json_object');
   assert.equal(app.calls.rewrite[0].tools,undefined);
@@ -110,16 +109,12 @@ test('review rejects coercible or out-of-range scores, extra dimensions and unkn
  }
 });
 
-test('review accepts evidence_id citations and tolerates paraphrased evidence text',async()=>{
- const withId=goodReview();
- withId.dimensions.forEach((d,i)=>{d.evidence_id=i+1;delete d.evidence;});
- const app=setup({review:()=>withId}),r=await app.request('hr-review');
+test('review returns empty evidence; scores and comments are preserved',async()=>{
+ const app=setup({review:()=>goodReview()}),r=await app.request('hr-review');
  assert.equal(r.status,200);assert.equal(r.payload.ok,true);
- assert.equal(r.payload.dimensions[0].evidence,'Alex Example');
- const paraphrased=goodReview();
- paraphrased.dimensions[0].evidence='Led engineering teams informally';
- const app2=setup({review:()=>paraphrased}),r2=await app2.request('hr-review');
- assert.equal(r2.status,200);assert.equal(r2.payload.dimensions[0].evidence,'');
+ assert.equal(r.payload.dimensions[0].evidence,'');
+ assert.equal(r.payload.dimensions[0].score,68);
+ assert.ok(r.payload.dimensions[0].comment.includes('engineering'));
 });
 
 test('review rejects surrounding prose instead of extracting a convenient JSON substring',async()=>{
