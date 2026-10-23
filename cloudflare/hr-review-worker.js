@@ -767,13 +767,22 @@ return new Response('Not found',{status:404,headers:CORS});
 
 function billingRuntime(){return createBilling({auth:getAuthUser,isAdmin:isAdminRequest,headers:CORS,validateAi:validateAiInput});}
 async function doReview(env,resume,jd,lang){
-if (!env.AI) throw new Error('AI binding missing');
 const canary = 'checkats-guard-' + crypto.randomUUID();
 const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
 let dimParsed = null;
 let model = "";
 let lastErr = null;
-// 每个模型各试一次：解析失败也切备用模型，不只靠 seed 重试
+// 优先 SiliconFlow 免费 Qwen，失败回落 Workers AI
+try {
+const r = await runSiliconFlow(env, reviewMessages, 2048);
+model = r.model;
+dimParsed = parseReviewOutput(r.text, resume, canary, env);
+} catch (e) {
+lastErr = e;
+const msg = String((e && e.message) || e || '');
+if (msg === 'QUOTA_EXCEEDED') throw new Error(lang === "en" ? "Today's free AI quota is used up, please try again after 08:00 (Beijing time)" : "今日 AI 免费额度已用完，请明天 08:00 后再试");
+// 回落 Workers AI
+if (env.AI) {
 for (const m of TEXT_MODELS) {
 for (let attempt = 0; attempt < 2; attempt++) {
 try {
@@ -781,15 +790,17 @@ const r = await runTextOne(env, m, reviewMessages, 2048, 0, 42 + attempt);
 model = r.model;
 dimParsed = parseReviewOutput(r.text, resume, canary, env);
 break;
-} catch (e) {
-lastErr = e;
-const msg = String((e && e.message) || e || '');
-if (/daily free allocation|10,000 neurons|429|quota|rate.limit/i.test(msg)) {
+} catch (e2) {
+lastErr = e2;
+const msg2 = String((e2 && e2.message) || e2 || '');
+if (/daily free allocation|10,000 neurons|429|quota|rate.limit/i.test(msg2)) {
 throw new Error('QUOTA_EXCEEDED');
 }
 }
 }
 if (dimParsed) break;
+}
+}
 }
 if (lastErr && String((lastErr && lastErr.message) || '') === 'QUOTA_EXCEEDED') throw new Error(lang === "en" ? "Today's free AI quota is used up, please try again after 08:00 (Beijing time)" : "今日 AI 免费额度已用完，请明天 08:00 后再试");
 if (!dimParsed) throw new Error(lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试");
@@ -815,6 +826,32 @@ const out = await env.AI.run(model, params);
 const text = getText(out).trim();
 if (!text) throw new Error("empty response");
 return { text, model };
+}
+
+// SiliconFlow Qwen（免费）：OpenAI 兼容接口，优先于 Workers AI
+async function runSiliconFlow(env, messages, maxTokens = 1024) {
+const key = env.SILICONFLOW_API_KEY;
+if (!key) throw new Error("no siliconflow key");
+const body = {
+model: "Qwen/Qwen2.5-7B-Instruct",
+messages: messages,
+max_tokens: maxTokens,
+temperature: 0
+};
+const resp = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
+method: "POST",
+headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+body: JSON.stringify(body)
+});
+if (!resp.ok) {
+const t = await resp.text().catch(() => "");
+if (resp.status === 429 || resp.status === 402) throw new Error("QUOTA_EXCEEDED");
+throw new Error("siliconflow http " + resp.status + ": " + t.slice(0, 200));
+}
+const data = await resp.json();
+const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+if (!text) throw new Error("empty response");
+return { text, model: "Qwen/Qwen2.5-7B-Instruct (SiliconFlow)" };
 }
 
 async function handleReview(request,env){
