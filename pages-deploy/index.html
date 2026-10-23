@@ -260,7 +260,7 @@
   </script>
   <script src="/scripts/pdf-engine.js"></script>
   <script src="/scripts/auth.js"></script>
-  <script src="/scripts/billing.js?v=20261023-prefetch"></script>
+  <script src="/scripts/billing.js?v=20261023-cache"></script>
   <script src="/scripts/auth-ui.js?v=20261023-profile3"></script>
   <script src="/scripts/pdf-import.js"></script>
   <script>
@@ -462,6 +462,32 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       var latestAiOriginal = '';
       var aiComparison = null;
       var aiReviewComparison = null;
+
+      // ---- 本地缓存：刷新不丢输入框和 AI 结果 ----
+      var persistTimer=null;
+      function persistState(){
+        clearTimeout(persistTimer);
+        persistTimer=setTimeout(function(){
+          try{
+            localStorage.setItem('checkats_analyzer_cache',JSON.stringify({
+              resume:resumeEl.value,jd:jobEl.value,review:latestHrReview,ts:Date.now()
+            }));
+          }catch(e){}
+        },800);
+      }
+      function restoreState(){
+        try{
+          var c=JSON.parse(localStorage.getItem('checkats_analyzer_cache')||'null');
+          if(!c||typeof c.resume!=='string'||!c.resume.trim())return false;
+          if(Date.now()-(c.ts||0)>7*864e5)return false;
+          resumeEl.value=c.resume;jobEl.value=c.jd||'';
+          latestHrReview=c.review||null;
+          if(latestHrReview)latestAiOutput=c.resume;
+          updateCounts();
+          return true;
+        }catch(e){return false;}
+      }
+      function clearPersist(){try{localStorage.removeItem('checkats_analyzer_cache');}catch(e){}}
 
       var i18n = {
         en: {
@@ -690,8 +716,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         resumeCount.textContent = t('wordCount', {count:words(resumeEl.value).length});
         jobCount.textContent = t('wordCount', {count:words(jobEl.value).length});
       }
-      resumeEl.addEventListener('input', function(){ updateCounts(); window.resumePdf.sourceChanged(resumeEl.value); });
-      jobEl.addEventListener('input', updateCounts);
+      resumeEl.addEventListener('input', function(){ updateCounts(); window.resumePdf.sourceChanged(resumeEl.value); persistState(); });
+      jobEl.addEventListener('input', function(){ updateCounts(); persistState(); });
 
       sampleBtn.addEventListener('click', function () {
         resumeEl.value = sampleResume;
@@ -1149,6 +1175,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           }
           latestHrReview={overall:payload.overall.trim(),model:payload.model.trim(),dimensions:normalizedDimensions};
           reviewSucceeded=true;
+          persistState();
         }catch(error){
           hrReviewError=t('hrReviewFailed');
         }finally{
@@ -1373,6 +1400,7 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           latestHrReview=null;
           hrReviewLoading=false;
           hrReviewError='';
+          persistState();
           scanHistory.push({ats:rescored.atsScore});
           preserveScroll(function(){renderResults(rescored,latestAiOutput,false);});
           setMessageKey('analysisComplete',{ats:rescored.atsScore},false);
@@ -1437,7 +1465,10 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         var saved=await window.CheckATSBilling.saveJob(Object.assign(analyzerSnapshot(),{company:context?.company||'',role:context?.role||''}),context?.id,context?.updated_at);
         if(saved){sessionStorage.setItem('checkats_job_context',JSON.stringify({id:saved.id,company:saved.company,role:saved.role,updated_at:saved.updated_at}));setMessageKey('jobSaved',{},false);}
       }
-      try{var restored=JSON.parse(sessionStorage.getItem('checkats_analyzer_restore')||'null');if(restored){resumeEl.value=restored.rewritten||restored.resume||'';jobEl.value=restored.jd||'';latestAiOutput=restored.rewritten||'';latestHrReview=restored.review||null;latestAiOriginal=restored.resume||'';updateCounts();if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);}sessionStorage.removeItem('checkats_analyzer_restore');}}catch(_){}
+      try{var restored=JSON.parse(sessionStorage.getItem('checkats_analyzer_restore')||'null');if(restored){resumeEl.value=restored.rewritten||restored.resume||'';jobEl.value=restored.jd||'';latestAiOutput=restored.rewritten||'';latestHrReview=restored.review||null;latestAiOriginal=restored.resume||'';updateCounts();if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);}sessionStorage.removeItem('checkats_analyzer_restore');persistState();}}catch(_){}
+      if(!lastAnalysis&&restoreState()){
+        if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);if(latestHrReview)updateHrReviewPanel({});}
+      }
       authUI = window.CheckATSAuthUI.mount({language:function(){return currentLang;},request:workerFetch});
       updateCounts();
     })();
