@@ -260,7 +260,7 @@
   </script>
   <script src="/scripts/pdf-engine.js"></script>
   <script src="/scripts/auth.js"></script>
-  <script src="/scripts/billing.js?v=20261023-freereview"></script>
+  <script src="/scripts/billing.js?v=20261023-keeporiginal"></script>
   <script src="/scripts/auth-ui.js?v=20261023-profile3"></script>
   <script src="/scripts/pdf-import.js"></script>
   <script>
@@ -470,7 +470,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
         persistTimer=setTimeout(function(){
           try{
             localStorage.setItem('checkats_analyzer_cache',JSON.stringify({
-              resume:resumeEl.value,jd:jobEl.value,review:latestHrReview,ts:Date.now()
+              resume:resumeEl.value,jd:jobEl.value,review:latestHrReview,
+              aiOutput:latestAiOutput,aiOriginal:latestAiOriginal,ts:Date.now()
             }));
           }catch(e){}
         },800);
@@ -482,7 +483,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           if(Date.now()-(c.ts||0)>7*864e5)return false;
           resumeEl.value=c.resume;jobEl.value=c.jd||'';
           latestHrReview=c.review||null;
-          if(latestHrReview)latestAiOutput=c.resume;
+          latestAiOutput=c.aiOutput||'';
+          latestAiOriginal=c.aiOriginal||'';
           updateCounts();
           return true;
         }catch(e){return false;}
@@ -1395,7 +1397,6 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
           lastAnalysis=rescored;
           lastResume=latestAiOutput;
           lastJob=job;
-          resumeEl.value=latestAiOutput;
           updateCounts();
           hrReviewLoading=false;
           hrReviewError='';
@@ -1476,7 +1477,8 @@ Java、Spring Boot、MyBatis、MySQL、Redis、Linux、Git`;
       }
       try{var restored=JSON.parse(sessionStorage.getItem('checkats_analyzer_restore')||'null');if(restored){resumeEl.value=restored.rewritten||restored.resume||'';jobEl.value=restored.jd||'';latestAiOutput=restored.rewritten||'';latestHrReview=restored.review||null;latestAiOriginal=restored.resume||'';updateCounts();if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);}sessionStorage.removeItem('checkats_analyzer_restore');persistState();}}catch(_){}
       if(!lastAnalysis&&restoreState()){
-        if(resumeEl.value.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(resumeEl.value,jobEl.value);lastResume=resumeEl.value;lastJob=jobEl.value;renderResults(lastAnalysis,lastResume,false);if(latestHrReview)updateHrReviewPanel({});}
+        var scoreText=latestAiOutput||resumeEl.value;
+        if(scoreText.trim()&&jobEl.value.trim()){lastAnalysis=scoreResume(scoreText,jobEl.value);lastResume=scoreText;lastJob=jobEl.value;renderResults(lastAnalysis,scoreText,false);if(latestHrReview)updateHrReviewPanel({});}
       }
       authUI = window.CheckATSAuthUI.mount({language:function(){return currentLang;},request:workerFetch});
       updateCounts();
