@@ -95,4 +95,5 @@
   window.CheckATSBilling={request,refresh,getAccount:()=>account,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},language,words,escape,link,modal,requireLogin,requireAi,plansDialog,checkin,checkout,portal,isBasicTemplate,templateAllowed,saveJob,authorizeExport,fetchAi};
   window.CheckATSAuth?.onAuthStateChange(()=>refresh().catch(()=>{}));
   window.addEventListener('storage',event=>{if(event.key==='checkats-auth-session')refresh().catch(()=>{});});
+  if(window.CheckATSAuth?.getSession())refresh().catch(()=>{});
 })();
