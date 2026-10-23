@@ -101,12 +101,16 @@ test('quoted JSON and delimiter-looking text stay data; client model and keyword
  assert.equal(data.resume,input.resume);assert.ok(!sent.messages[0].content.includes('document example'));assert.ok(!sent.messages[0].content.includes('arbitrary policy'));
 });
 
-test('review rejects coercible or out-of-range scores, extra dimensions and unknown keys',async()=>{
- const changes=[p=>p.dimensions[0].score='100',p=>p.dimensions[0].score=101,p=>p.dimensions[0].score=-1,p=>p.dimensions[0].score=65.5,p=>p.dimensions.push(p.dimensions[0]),p=>p.tool_call='send-email',p=>p.dimensions[0].extra='run command',p=>p.overall='',p=>p.dimensions[0].comment={}];
+test('review rejects coercible or out-of-range scores and extra dimensions; tolerates extra keys',async()=>{
+ const changes=[p=>p.dimensions[0].score='100',p=>p.dimensions[0].score=101,p=>p.dimensions[0].score=-1,p=>p.dimensions[0].score=65.5,p=>p.dimensions.push(p.dimensions[0]),p=>p.overall='',p=>p.dimensions[0].comment={}];
  for(const change of changes){
   const p=goodReview();change(p);const app=setup({review:()=>p}),r=await app.request('hr-review');
   assert.equal(r.status,502);assert.equal(r.payload.ok,false);assert.equal(r.payload.dimensions,undefined);assert.equal(app.calls.review.length,4);
  }
+ // extra keys are ignored, not rejected
+ const tolerated=goodReview();tolerated.tool_call='send-email';tolerated.dimensions[0].extra='run command';
+ const app2=setup({review:()=>tolerated}),r2=await app2.request('hr-review');
+ assert.equal(r2.status,200);assert.equal(r2.payload.ok,true);
 });
 
 test('review returns empty evidence; scores and comments are preserved',async()=>{

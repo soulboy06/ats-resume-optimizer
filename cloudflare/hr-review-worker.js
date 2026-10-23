@@ -136,13 +136,19 @@ if (contactTokens(text).some(s => !allowed.has(s.replace(/[.,;:!?]+$/, '').toLow
 }
 function parseReviewOutput(text, resume, canary, env) {
 const p = parseAiJson(text);
-if (!exactKeys(p, ['dimensions','overall']) || !Array.isArray(p.dimensions) || p.dimensions.length !== 4 || typeof p.overall !== 'string' || !p.overall.trim() || p.overall.length > 1000) throw new Error('invalid review');
+// 顶层只要求有 dimensions 和 overall，允许模型带多余键（忽略不用）
+if (!p || typeof p !== 'object' || !Array.isArray(p.dimensions) || p.dimensions.length !== 4 || typeof p.overall !== 'string' || !p.overall.trim() || p.overall.length > 1000) throw new Error('invalid review');
+const dimensions = [];
 for (const d of p.dimensions) {
-if (!exactKeys(d, ['score','comment']) || !Number.isInteger(d.score) || d.score < 0 || d.score > 100 || typeof d.comment !== 'string' || !d.comment.trim() || d.comment.length > 400) throw new Error('invalid review');
-d.evidence = '';
+if (!d || typeof d !== 'object') throw new Error('invalid review');
+const score = d.score;
+const comment = d.comment;
+if (!Number.isInteger(score) || score < 0 || score > 100 || typeof comment !== 'string' || !comment.trim() || comment.length > 400) throw new Error('invalid review');
+dimensions.push({ score, comment: comment.trim(), evidence: '' });
 }
-assertSafeAiOutput([p.overall,...p.dimensions.map(d => d.comment)].join('\n'), resume, canary, env);
-return p;
+const overall = p.overall.trim();
+assertSafeAiOutput([overall,...dimensions.map(d => d.comment)].join('\n'), resume, canary, env);
+return { dimensions, overall };
 }
 
 const CORS = {
