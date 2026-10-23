@@ -29,6 +29,10 @@ Worker → `wrangler deploy` (or the Cloudflare dashboard); set secrets with
 
 ## Sync workflow (Muse + local agent)
 
+AI review and rewrite share server-side document isolation, request/output
+validation and injection regression tests. See [AI trust boundaries](docs/ai-security.md)
+for the defenses, residual limits and Worker rollout requirements.
+
 This repo is the source of truth. Two agents work on it:
 
 1. **Muse** (cloud) pushes site/content changes here, then deploys.
@@ -39,10 +43,14 @@ commit; never commit secrets (`.gitignore` covers the usual suspects).
 
 ## Product notes
 
+- Email/password authentication now uses desktop-entered email codes for signup
+  and password recovery. See [email-code rollout](docs/auth-email-codes.md) for
+  the matching Supabase templates and deployment order.
+
 - Scoring is a simulation, labeled as such in the UI: ATS pass rate =
   JD keyword coverage 60% + plain-text parsability 40%.
-- No login / paywall by decision (2026-10-11). Do not reintroduce paid UI
-  without the owner's go-ahead.
+- Local ATS checks remain available without login; AI operations use the current
+  Supabase account and credit system. Do not add paid UI without the owner's go-ahead.
 - The UI uses the owner-approved Craft-inspired editorial design: warm cream
   graph paper, terracotta accents, serif headings, and frosted glass components
   (2026-10-12). Keep decorative imagery and colored background blobs out of the UI.

@@ -7,6 +7,8 @@
   };
   Object.assign(copy.en,{title:'Resume PDF Studio',back:'Back to analyzer',navAnalyzer:'Resume analyzer',navStudio:'PDF Studio',navGuide:'Guides',contentTab:'Content',styleTab:'Style',pageStyle:'Page style',editContent:'Edit content',templates:'Choose a template',details:'Personal details',role:'Professional title',uploadPhoto:'Add a photo',preview:'Resume preview',download:'Export PDF',saved:'Saved',all:'All',previous:'Previous template',next:'Next template',close:'Close editor',zoomIn:'Zoom in',zoomOut:'Zoom out',fullscreen:'Fullscreen preview'});
   Object.assign(copy.zh,{title:'简历制作工作台',back:'返回改写',navAnalyzer:'简历分析',navStudio:'PDF 工作台',navGuide:'使用指南',contentTab:'内容',styleTab:'样式',pageStyle:'页面样式',editContent:'编辑内容',templates:'选择模板',details:'基本信息',role:'职位',uploadPhoto:'添加照片',preview:'简历预览',download:'导出 PDF',saved:'已保存',all:'全部',previous:'上一个模板',next:'下一个模板',close:'关闭编辑器',zoomIn:'放大预览',zoomOut:'缩小预览',fullscreen:'全屏预览'});
+  Object.assign(copy.en,{authTitle:'Log in',authIntro:'We’ll email you a sign-in link. No password needed.',authClose:'Close',authEmailLabel:'Email',authSendLink:'Send sign-in link',authSending:'Sending…',authCheckEmail:'Sign-in link sent — check your inbox.',authFailed:'Couldn’t send the link. Please try again.',authInvalidEmail:'Enter a valid email address.',authLogin:'Log in',authLogout:'Log out',authCredits:'{count} credits',authCreditsOne:'1 credit',authTabLink:'Magic link',authTabPassword:'Password',authPasswordLabel:'Password',authPasswordHint:'At least 6 characters. Passwords are hashed \u2014 we never see them.',authPasswordIntro:'Log in with your email and password on any device.',authSignIn:'Log in',authSignUp:'Sign up',authNeedAccount:'No account? Sign up',authHaveAccount:'Have an account? Log in',authPasswordTooShort:'Password must be at least 6 characters.',authConfirmEmail:'Account created \u2014 check your email to confirm, then log in.',authForgotPassword:'Forgot password?',authResetSent:'Password reset email sent \u2014 check your inbox.',authNewPasswordLabel:'New password',authSetPassword:'Set new password',authPasswordUpdated:'Password updated \u2014 you are logged in.'});
+  Object.assign(copy.zh,{authTitle:'登录',authIntro:'我们会给你发一封登录链接邮件，无需密码。',authClose:'关闭',authEmailLabel:'邮箱',authSendLink:'发送登录链接',authSending:'发送中…',authCheckEmail:'登录链接已发送，请查收邮件。',authFailed:'发送失败，请重试。',authInvalidEmail:'请输入有效的邮箱地址。',authLogin:'登录',authLogout:'退出',authCredits:'{count} 次',authCreditsOne:'1 次',authTabLink:'邮件链接',authTabPassword:'密码',authPasswordLabel:'密码',authPasswordHint:'至少 6 位。密码经哈希存储，我们看不到明文。',authPasswordIntro:'用邮箱+密码在任何设备上登录。',authSignIn:'登录',authSignUp:'注册',authNeedAccount:'没有账号？去注册',authHaveAccount:'已有账号？去登录',authPasswordTooShort:'密码至少 6 位。',authConfirmEmail:'账号已创建，请查收邮件确认后再登录。',authForgotPassword:'忘记密码？',authResetSent:'重置邮件已发送，请查收邮箱。',authNewPasswordLabel:'新密码',authSetPassword:'设置新密码',authPasswordUpdated:'密码已更新，你已登录。'});
   const map={fName:'name',fTitle:'title',fContact:'contact'};
   Object.assign(copy.en,{lineSpacing:'Line spacing',templateSpacing:'Template default'});
   Object.assign(copy.zh,{lineSpacing:'正文行距',templateSpacing:'模板默认'});
@@ -160,4 +162,14 @@
   grid.addEventListener('wheel',event=>{const delta=event.shiftKey?event.deltaY:event.deltaX;if(Math.abs(delta)<Math.abs(event.shiftKey?event.deltaX:event.deltaY)||!delta)return;event.preventDefault();const now=Date.now();if(now-wheelTime>160)wheelDelta=0;wheelTime=now;wheelDelta+=delta;if(Math.abs(wheelDelta)>45&&now-wheelLastStep>200){stepTemplate(wheelDelta>0?1:-1);wheelDelta=0;wheelLastStep=now;}},{passive:false});
   new ResizeObserver(()=>{layoutCarousel();updateZoom();}).observe($('studioWorkspace'));
   language();sync();updateZoom();if(Object.values(state.data).some(Boolean))schedule();else $('importDetails').open=true;
+
+  async function workerFetch(path,options){
+    const token=await window.CheckATSAuth.getAccessToken(),headers=new Headers(options?.headers||{});
+    if(token)headers.set('Authorization','Bearer '+token);
+    const pass=new URLSearchParams(location.search).get('pass');if(pass)headers.set('X-Admin-Pass',pass);
+    return fetch('https://ats-hr-review.hhjgudhdjugudh878.workers.dev'+path,{...options,headers});
+  }
+  const authUI=window.CheckATSAuthUI.mount({language:()=>lang,request:workerFetch});
+  const applyStudioLanguage=language;
+  language=function(){applyStudioLanguage();if(authUI)authUI.refresh();};
 })();
