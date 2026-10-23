@@ -659,7 +659,16 @@ if (!exactKeys(parsed, ['rewritten']) || typeof parsed.rewritten !== 'string' ||
 assertSafeAiOutput(parsed.rewritten, resume, canary, env);
 const rewrittenContacts = new Set(contactTokens(parsed.rewritten).map(s => s.replace(/[.,;:!?]+$/, '').toLowerCase()));
 if (contactTokens(resume).some(s => !rewrittenContacts.has(s.replace(/[.,;:!?]+$/, '').toLowerCase()))) throw new Error('resume contact removed');
-return Response.json({ ok: true, rewritten: parsed.rewritten.trim(), model }, { headers: CORS });
+const rewritten = parsed.rewritten.trim();
+// 改写附带一次免费 AI 点评（不额外扣积分）：点评改写后的简历
+let freeReview = null;
+if (body.include_review === true) {
+try {
+const r = await doReview(env, rewritten, jd, lang);
+freeReview = { dimensions: r.dimensions, overall: r.overall, model: r.model };
+} catch (_) { /* 点评失败不影响改写结果 */ }
+}
+return Response.json({ ok: true, rewritten, model, review: freeReview }, { headers: CORS });
 } catch (e) {
 const raw = String((e && e.message) || e || "");
 const friendly = /deepseek 401/.test(raw)
@@ -751,6 +760,35 @@ return new Response('Not found',{status:404,headers:CORS});
 };
 
 function billingRuntime(){return createBilling({auth:getAuthUser,isAdmin:isAdminRequest,headers:CORS,validateAi:validateAiInput});}
+async function doReview(env,resume,jd,lang){
+if (!env.AI) throw new Error('AI binding missing');
+const canary = 'checkats-guard-' + crypto.randomUUID();
+const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
+let dimParsed = null;
+let model = "";
+for (let attempt = 0; attempt < 2; attempt++) {
+const r = await runText(env, reviewMessages, 2048, 0, 42 + attempt);
+model = r.model;
+try {
+dimParsed = parseReviewOutput(r.text, resume, canary, env);
+break;
+} catch (_) { /* Retry once with the same trusted rules; never recycle a model's output as instructions. */ }
+}
+if (!dimParsed) throw new Error(lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试");
+const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
+const dimensions = DIMENSIONS.map((d, i) => {
+const it = dimItems[i] || {};
+return {
+key: d.key,
+name: d.name,
+score: it.score,
+comment: it.comment.trim(),
+evidence: it.evidence,
+};
+});
+return { dimensions, overall: dimParsed.overall.trim(), model };
+}
+
 async function handleReview(request,env){
 if (!env.AI) {
 return Response.json(
@@ -782,36 +820,7 @@ try {
 // ---- 调用 A：四个维度打分 + 总评（直接读全文，不依赖任何解析）----
 // 解析失败自动重试一次；两次都失败则明确报错，绝不返回 50 占位分。
 // （2026-10-11 教训：占位 50 会被前端当成真实分数展示，让用户误以为改写后变差）
-const canary = 'checkats-guard-' + crypto.randomUUID();
-const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
-let dimParsed = null;
-let model = "";
-for (let attempt = 0; attempt < 2; attempt++) {
-const r = await runText(env, reviewMessages, 2048, 0, 42 + attempt);
-model = r.model;
-try {
-dimParsed = parseReviewOutput(r.text, resume, canary, env);
-break;
-} catch (_) { /* Retry once with the same trusted rules; never recycle a model's output as instructions. */ }
-}
-if (!dimParsed) {
-return Response.json(
-{ ok: false, error: lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试" },
-{ status: 502, headers: CORS }
-);
-}
-const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
-const dimensions = DIMENSIONS.map((d, i) => {
-const it = dimItems[i] || {};
-return {
-key: d.key,
-name: d.name,
-score: it.score,
-comment: it.comment.trim(),
-evidence: it.evidence,
-};
-});
-const overall = dimParsed.overall.trim();
+const { dimensions, overall, model } = await doReview(env, resume, jd, lang);
 
 return Response.json(
 { ok: true, dimensions, overall, bullets: [], model},
@@ -820,6 +829,12 @@ return Response.json(
 } catch (e) {
 // Never return provider bodies or exception messages: they may echo source text or credentials.
 const raw = String((e && e.message) || '');
+if (/failed to produce valid scores|未能返回有效分数/.test(raw)) {
+return Response.json(
+{ ok: false, error: raw },
+{ status: 502, headers: CORS }
+);
+}
 const friendly = /deprecat/i.test(raw)
 ? (lang === 'en' ? 'Review model is temporarily unavailable' : '点评模型暂不可用，请稍后重试')
 : (lang === 'en' ? 'Review service could not validate the response; please retry' : '点评结果未通过校验，请稍后重试');
