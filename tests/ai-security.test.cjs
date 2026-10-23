@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
-const source=fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/hr-review-worker.js'),'utf8').replace('export default','const worker =');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/hr-review-worker.js'),'utf8').replace(/^import .*createBilling.*;$/m,'').replace('export default','const worker =');
 const resume='Alex Example\nalex@example.com\nhttps://alex.example.com\nSoftware Engineer\nBuilt Python services handling 18000 events daily.\nSkills: Python, SQL';
 const jd='Python developer building reliable SQL services.';
 const base=()=>({resume,jd,missing:['Python','SQL'],lang:'en'});
@@ -20,7 +20,7 @@ function setup(options={}){
   const reply=options.rewrite?options.rewrite(body):{rewritten:resume};
   return Response.json({choices:[{message:{content:typeof reply==='string'?reply:JSON.stringify(reply)},finish_reason:options.finishReason||'stop'}]});
  }});
- vm.runInContext(source+'\nthis.worker=worker;',ctx);
+ vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../cloudflare/billing-core.js'),'utf8').replace('export function createBilling','function createBilling')+'\n'+source+'\nthis.worker=worker;',ctx);
  return {calls,async request(kind,body=base()){
   const response=await ctx.worker.fetch(new Request('https://test.local/api/'+kind,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Pass':env.ADMIN_PASS},body:JSON.stringify(body)}),env);
   return {status:response.status,payload:await response.json()};

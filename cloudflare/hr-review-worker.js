@@ -1,3 +1,4 @@
+import { createBilling } from './billing-core.js';
 // Cloudflare Worker — "HR 阅读印象" AI 点评 (Workers AI 小模型).
 // 与 ATS 规则评分互补：规则只做关键词匹配（纯文本搜索，不依赖解析）；
 // 小模型负责语义判断：四个维度打分 + 总评（2026-10-10 起不再做逐条点评）。
@@ -14,9 +15,8 @@
 // "bullets": [],  // 已下线：不再做逐条点评，只保留四个维度打分
 // "model": "llama-3.2-3b"}
 //
-// 部署: echo '{"name":"ats-hr-review","script":"<本文件>","bindings":[{"type":"ai","name":"AI"},{"type":"kv_namespace","name":"RATE_KV","namespace_id":"33fd172d50d046119e92b7da69ed1ca8"},{"type":"d1","name":"DB","id":"20324804-bf68-497a-accd-b7eeaf9fe299"}]}' \
-// | python3 ~/workspace/skills/cloudflare/bin/workers_deploy.py
-// 注意：每次部署必须带全 bindings，否则会丢掉 RATE_KV 限流和 D1。
+// 部署（需打包 billing-core.js）：npx wrangler deploy --config cloudflare/wrangler.toml
+// 配置包含 AI、RATE_KV 与 D1；部署前核对绑定，勿使用单文件上传。
 // 反馈查看：https://ats-hr-review.hhjgudhdjugudh878.workers.dev/admin/feedback?pass=xxx
 
 // 文本模型：2026-10-10 实测可用。llama-3.2-3b 为主，gemma-2b-it-lora 兜底。
@@ -148,7 +148,7 @@ return p;
 const CORS = {
 "Access-Control-Allow-Origin": "*",
 "Access-Control-Allow-Methods": "POST, OPTIONS",
-"Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, Authorization",
+"Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, Authorization, X-Request-ID",
 };
 
 const DAILY_LIMIT = 5; // 每 IP 每天 5 次深度点评（Workers AI 免费额度）
@@ -211,12 +211,12 @@ if (parts.length !== 3) return null;
 const dec = new TextDecoder();
 const header = JSON.parse(dec.decode(b64urlDecode(parts[0])));
 const payload = JSON.parse(dec.decode(b64urlDecode(parts[1])));
-if (header.alg !== "RS256" || !header.kid) return null;
+if (!['RS256','ES256'].includes(header.alg) || !header.kid) return null;
 const nowSec = Math.floor(Date.now() / 1000);
 if (typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
 if (payload.aud !== "authenticated") return null;
-if (!String(payload.iss || "").startsWith(env.SUPABASE_URL)) return null;
-if (!payload.sub) return null;
+if (payload.iss !== env.SUPABASE_URL.replace(/\/$/,'')+'/auth/v1') return null;
+if (typeof payload.sub!=='string'||!payload.sub||payload.sub.length>128) return null;
 let jwks = await getSupabaseJwks(env);
 let jwk = (jwks.keys || []).find((k) => k.kid === header.kid);
 if (!jwk) {
@@ -226,16 +226,11 @@ jwks = await getSupabaseJwks(env);
 jwk = (jwks.keys || []).find((k) => k.kid === header.kid);
 if (!jwk) return null;
 }
-const key = await crypto.subtle.importKey(
-"jwk",
-{ kty: jwk.kty, n: jwk.n, e: jwk.e },
-{ name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-false,
-["verify"]
-);
+const algorithm=header.alg==='ES256'?{name:'ECDSA',namedCurve:'P-256'}:{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'};
+const key = await crypto.subtle.importKey('jwk',jwk,algorithm,false,['verify']);
 const data = new TextEncoder().encode(parts[0] + "." + parts[1]);
 const sig = b64urlDecode(parts[2]);
-const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, sig, data);
+const ok = await crypto.subtle.verify(header.alg==='ES256'?{name:'ECDSA',hash:'SHA-256'}:'RSASSA-PKCS1-v1_5', key, sig, data);
 if (!ok) return null;
 return { id: payload.sub, email: typeof payload.email === "string" ? payload.email : "" };
 } catch {
@@ -574,12 +569,6 @@ return Response.json(
 { status: 500, headers: CORS }
 );
 }
-if (await checkAiQuota(request, env, "rewrite", REWRITE_DAILY_LIMIT) === "limited") {
-return Response.json(
-{ ok: false, error: "今日 AI 改写次数已用完，明天再来 / Daily rewrite limit reached" },
-{ status: 429, headers: CORS }
-);
-}
 let body;
 try {
 body = await readAiRequest(request);
@@ -710,8 +699,10 @@ if (request.method === "OPTIONS") {
 return new Response(null, { headers: CORS});
 }
 const url = new URL(request.url);
+if (url.pathname.startsWith('/api/billing/') || url.pathname==='/api/jobs' || url.pathname.startsWith('/api/jobs/')) return billingRuntime().route(request,env);
+if(url.pathname==='/api/hr-review')return billingRuntime().ai(request,env,'review',()=>handleReview(request,env));
 if (url.pathname === "/api/rewrite") {
-return handleRewrite(request, env);
+return billingRuntime().ai(request,env,'rewrite',()=>handleRewrite(request,env));
 }
 if (url.pathname === "/api/send-email") {
 return handleSendEmail(request, env);
@@ -720,7 +711,7 @@ if (url.pathname === "/api/feedback") {
 return handleFeedback(request, env);
 }
 if (url.pathname === "/api/auth/me") {
-return handleAuthMe(request, env);
+return billingRuntime().route(request,env);
 }
 if (url.pathname === "/api/credits/add") {
 return handleCreditsAdd(request, env);
@@ -731,17 +722,16 @@ return handleFeedbackAdmin(request, env);
 if (url.pathname!== "/api/hr-review" || request.method!== "POST") {
 return new Response("Not found", { status: 404, headers: CORS});
 }
+return new Response('Not found',{status:404,headers:CORS});
+},
+};
+
+function billingRuntime(){return createBilling({auth:getAuthUser,isAdmin:isAdminRequest,headers:CORS,validateAi:validateAiInput});}
+async function handleReview(request,env){
 if (!env.AI) {
 return Response.json(
 { ok: false, error: "Worker 未绑定 Workers AI / AI binding missing"},
 { status: 500, headers: CORS}
-);
-}
-
-if (await checkAiQuota(request, env, "review", DAILY_LIMIT) === "limited") {
-return Response.json(
-{ ok: false, error: "今日深度点评次数已用完，明天再来 / Daily limit reached"},
-{ status: 429, headers: CORS}
 );
 }
 
@@ -814,5 +804,4 @@ return Response.json(
 { status: 502, headers: CORS}
 );
 }
-},
-};
+}

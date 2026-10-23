@@ -9,6 +9,7 @@
     const auth=window.CheckATSAuth,$=id=>document.getElementById(id),area=$('authArea'),backdrop=$('authBackdrop'),dialog=$('authDialog');
     if(!auth||!area||!backdrop||!dialog)return null;
     let mode='login',busy=false,credits=null,lastFocus=null,statusKey='',statusError=false,refreshRevision=0;
+    copy.zh.credits='{n} 积分';copy.en.credits='{n} points';
     const text=(key,n)=>copy[options.language()==='zh'?'zh':'en'][key].replace('{n}',String(n??''));
     dialog.innerHTML='<div class="auth-head"><div><h2 id="authTitle"></h2><p id="authIntro"></p></div><button class="auth-close" id="authClose" type="button" aria-label="Close">×</button></div><form id="authForm" novalidate><div class="auth-field" id="authEmailField"><label for="authEmail"></label><input id="authEmail" name="email" type="email" required maxlength="240" autocomplete="email" placeholder="you@example.com"></div><div class="auth-field" id="authPasswordField"><label for="authPassword"></label><input id="authPassword" name="password" type="password" required minlength="6" maxlength="128" autocomplete="current-password"><p class="auth-hint" id="authPasswordHint"></p></div><div class="auth-field" id="authCodeField" hidden><label for="authCode"></label><input id="authCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" spellcheck="false"></div><div class="auth-field" id="authNewPasswordField" hidden><label for="authNewPassword"></label><input id="authNewPassword" name="new-password" type="password" minlength="6" maxlength="128" autocomplete="new-password"></div><div class="auth-field" id="authConfirmPasswordField" hidden><label for="authConfirmPassword"></label><input id="authConfirmPassword" name="confirm-password" type="password" minlength="6" maxlength="128" autocomplete="new-password"></div><p class="auth-verification-email" id="authVerificationEmail" hidden></p><div class="auth-actions"><button class="button button-primary" id="authSubmit" type="submit"><span class="button-label"></span></button></div><div class="auth-flow-links"><button class="auth-link-btn" id="authSwitchBtn" type="button"></button><button class="auth-link-btn" id="authForgotBtn" type="button"></button><button class="auth-link-btn" id="authResendBtn" type="button" hidden></button><button class="auth-link-btn" id="authBackBtn" type="button" hidden></button></div><p class="auth-status" id="authStatus" role="status" aria-live="polite"></p></form>';
     const form=$('authForm'),email=$('authEmail'),password=$('authPassword'),code=$('authCode'),newPassword=$('authNewPassword'),confirmPassword=$('authConfirmPassword');
@@ -61,9 +62,11 @@
     function close(){backdrop.classList.remove('active');backdrop.setAttribute('aria-hidden','true');document.body.classList.remove('auth-open');password.value='';code.value='';newPassword.value='';confirmPassword.value='';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
     function renderArea(session){
       area.replaceChildren();
+      const plans=document.createElement('a');plans.className='billing-plan-link';plans.href='/account/?tab=plans&lang='+options.language();plans.textContent=options.language()==='zh'?'套餐与积分':'Plans';area.append(plans);
       if(!session){const b=document.createElement('button');b.id='authLoginBtn';b.type='button';b.className='auth-login-btn';b.textContent=text('login');b.addEventListener('click',open);area.append(b);return;}
-      const user=document.createElement('span');user.className='auth-user';const who=document.createElement('span');who.className='auth-email';who.textContent=session.user&&session.user.email||'';who.title=who.textContent;user.append(who);
-      if(credits!==null){const count=document.createElement('span');count.className='auth-credits';count.textContent=text('credits',credits);user.append(count);}
+      const user=document.createElement('span');user.className='auth-user';const who=document.createElement('a');who.className='auth-email';who.href='/account/?tab=overview&lang='+options.language();who.textContent=session.user&&session.user.email||'';who.title=who.textContent;user.append(who);
+      if(credits!==null){const count=document.createElement('a');count.className='auth-credits';count.href='/account/?tab=points&lang='+options.language();count.textContent=text('credits',credits);user.append(count);}
+      const jobs=document.createElement('a');jobs.className='billing-plan-link profile-nav-link';jobs.href='/account/?tab=overview&lang='+options.language();jobs.textContent=options.language()==='zh'?'个人中心':'My account';user.append(jobs);
       const out=document.createElement('button');out.type='button';out.className='auth-logout-btn';out.textContent=text('logout');out.addEventListener('click',()=>auth.signOut());area.append(user,out);
     }
     async function refresh(){
@@ -99,6 +102,8 @@
       if(event.key==='Tab'){const items=[...dialog.querySelectorAll('button,input,a[href]')].filter(e=>!e.disabled&&e.getClientRects().length);const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
     });
     auth.onAuthStateChange(()=>refresh());
+    window.addEventListener('checkats:login',open);
+    window.addEventListener('checkats:balance',event=>{if(event.detail?.id===auth.getSession()?.user?.id){credits=event.detail.points.total;renderArea(auth.getSession());}});
     const timer=setInterval(()=>{if(backdrop.classList.contains('active')&&mode==='code')render();},1000);
     addEventListener('pagehide',()=>clearInterval(timer),{once:true});
     auth.handleRedirectCallback().catch(()=>status('expired',true)).then(()=>{refresh();if(auth.isRecoverySession())open();});

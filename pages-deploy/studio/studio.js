@@ -37,7 +37,7 @@
     $('templateTotal').href='/studio/templates/?lang='+lang+'&current='+encodeURIComponent(state.template);$('templateTotal').setAttribute('aria-label',(lang==='zh'?'浏览全部模板':'Browse all templates')+' ('+list.length+')');
     $('templatePrev').disabled=$('templateNext').disabled=list.length<2;
   }
-  function chooseTemplate(id,focus=false){if(id===state.template){layoutCarousel();return;}state.template=id;$('templateCredit').textContent=StudioTemplates.get(id).credit;layoutCarousel();if(focus)$('templateGrid').querySelector('[aria-pressed=true]').focus({preventScroll:true});schedule();}
+  function chooseTemplate(id,focus=false){if(!window.CheckATSBilling.templateAllowed(id)){window.CheckATSBilling.plansDialog(lang==='zh'?'解锁全部 30 个模板':'Unlock all 30 templates');return;}if(id===state.template){layoutCarousel();return;}state.template=id;$('templateCredit').textContent=StudioTemplates.get(id).credit;layoutCarousel();if(focus)$('templateGrid').querySelector('[aria-pressed=true]').focus({preventScroll:true});schedule();}
   function stepTemplate(delta,focus=false){const list=StudioTemplates.list(),index=list.findIndex(item=>item.id===state.template);chooseTemplate(list[(index+delta+list.length)%list.length].id,focus);}
   function renderTemplates(){
     $('templateGrid').replaceChildren();
@@ -46,7 +46,7 @@
       button.setAttribute('aria-pressed',String(template.id===state.template));button.setAttribute('aria-label',template.name[lang]);button.title=template.desc[lang];button.style.setProperty('--template-accent',template.accent);
       const sheet=document.createElement('img');sheet.className='template-sheet';sheet.src='/studio/assets/'+template.id+'.webp';sheet.alt='';sheet.width=170;sheet.height=240;
       const label=document.createElement('strong');label.textContent=template.name[lang];button.append(sheet,label);
-      button.addEventListener('click',()=>chooseTemplate(template.id));$('templateGrid').append(button);
+      button.classList.toggle('is-premium',!window.CheckATSBilling.templateAllowed(template.id));button.addEventListener('click',()=>chooseTemplate(template.id));$('templateGrid').append(button);
     }
     $('templateCredit').textContent=StudioTemplates.get(state.template).credit;
     layoutCarousel();
@@ -126,9 +126,29 @@
   $('photoRemove').addEventListener('click',()=>{photoVersion++;state.photo=null;photoPreview();$('photoStatus').textContent='';schedule();});
   const emptyPreview=$('resumePreview').firstElementChild.cloneNode(true);
   $('clearBtn').addEventListener('click',()=>{if(!confirm(t('confirmClear')))return;photoVersion++;state.data=engine.blank();state.photo=null;$('rawResume').value='';$('photoStatus').textContent='';sync();schedule();$('resumePreview').replaceChildren(emptyPreview.cloneNode(true));language();notice(t('cleared'));});
-  $('exportPdfBtn').addEventListener('click',()=>{
-    if(!result)return;const url=URL.createObjectURL(new Blob([result.bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=url;a.download=(state.data.name||'resume').replace(/[^\p{L}\p{N}_-]/gu,'_')+'-'+state.template+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $('exportPdfBtn').addEventListener('click',async()=>{
+    if(!result)return;const current=result,version=revision;
+    $('exportPdfBtn').disabled=true;
+    try{const filename=(state.data.name||'resume').replace(/[^\p{L}\p{N}_-]/gu,'_')+'-'+state.template+'.pdf';
+      if(!window.CheckATSBilling.templateAllowed(state.template)){window.CheckATSBilling.plansDialog(lang==='zh'?'解锁这个模板后再导出':'Unlock this template to export');return;}
+      if(!(await window.CheckATSBilling.authorizeExport(current.bytes,filename)))return;
+      if(version!==revision){notice(lang==='zh'?'内容已修改，请重新导出。':'Content changed. Export the latest version.',true);return;}
+      const url=URL.createObjectURL(new Blob([current.bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(error){notice(error.message,true);}finally{if(result)$('exportPdfBtn').disabled=false;}
   });
+  const saveJob=document.createElement('button');saveJob.type='button';saveJob.className='button button-secondary button-sm billing-studio-save';saveJob.id='saveJobButton';
+  saveJob.addEventListener('click',async()=>{saveJob.disabled=true;try{
+    let context=null,snapshot={};try{context=JSON.parse(sessionStorage.getItem('checkats_job_context')||'null');snapshot=JSON.parse(sessionStorage.getItem('checkats_analyzer_snapshot')||'{}');}catch(_){}
+    const saved=await window.CheckATSBilling.saveJob({...snapshot,studio:state,company:context?.company||'',role:context?.role||''},context?.id,context?.updated_at);
+    if(saved){sessionStorage.setItem('checkats_job_context',JSON.stringify({id:saved.id,company:saved.company,role:saved.role,updated_at:saved.updated_at}));$('saveIndicator').textContent=lang==='zh'?'岗位方案已保存':'Application saved';}
+  }finally{saveJob.disabled=false;}});
+  document.querySelector('.studio-actions').prepend(saveJob);
+  function updateBillingLabels(){
+    saveJob.textContent=lang==='zh'?'保存到岗位':'Save to a job';
+    const a=window.CheckATSBilling.getAccount(),label=$('exportPdfBtn').querySelector('span');
+    label.textContent=a?.entitlements?.unlimited_export?(lang==='zh'?'导出 PDF · 通行证权益':'Export PDF · Included'):a?.entitlements?.premium?(lang==='zh'?'导出 PDF · 10 积分':'Export PDF · 10 points'):(lang==='zh'?'解锁 PDF 导出':'Unlock PDF export');
+  }
+  window.addEventListener('checkats:balance',()=>{renderTemplates();updateBillingLabels();});
   function updateZoom(){
     const host=$('resumePreview'),style=getComputedStyle(host),available=host.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
     host.style.setProperty('--paper-width',Math.max(100,Math.min(660,available)*zoom/100)+'px');$('zoomValue').textContent=zoom+'%';$('zoomOut').disabled=zoom<=50;$('zoomIn').disabled=zoom>=150;
@@ -171,5 +191,6 @@
   }
   const authUI=window.CheckATSAuthUI.mount({language:()=>lang,request:workerFetch});
   const applyStudioLanguage=language;
-  language=function(){applyStudioLanguage();if(authUI)authUI.refresh();};
+  language=function(){applyStudioLanguage();if(authUI)authUI.refresh();updateBillingLabels();};
+  updateBillingLabels();window.CheckATSBilling.refresh().catch(()=>{});
 })();
