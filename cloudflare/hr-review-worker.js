@@ -41,9 +41,9 @@ const DIMENSIONS = [
 // evidence 证据引用保持简历原文不动。
 function dimSystemPrompt(lang) {
 if (lang === "en") {
-return "You are a senior hiring manager. Score this resume on four dimensions (integer 0-100): 1) Writing strength: strong verbs, ownership; 2) Quantification & results: numbers, business impact, results-oriented; 3) Experience specificity: concrete details, context, verifiable, not empty claims; 4) Role alignment: relevance of the experience to the target job description. For each dimension give a one-sentence comment (in English, under 25 words) and one evidence quote (quote the resume verbatim, under 25 words; empty string if none found). End with a 2-3 sentence overall assessment: one sentence on the biggest strength, one on the biggest weakness, one with the single highest-priority improvement — be direct. Return ONLY JSON, no other text. Format: {\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"}],\"overall\":\"..\"}. The dimensions array order is fixed: writing strength, quantification & results, experience specificity, role alignment. Score anchors (pick the band first, then the exact score; be strict — most resumes land 55-75): 90+ = exceptional, top 1%; 75-89 = strong with only minor flaws; 60-74 = average with clear weaknesses; 40-59 = weak with multiple issues; below 40 = poor.";
+return "You are a senior hiring manager. Score this resume on four dimensions (integer 0-100): 1) Writing strength: strong verbs, ownership; 2) Quantification & results: numbers, business impact, results-oriented; 3) Experience specificity: concrete details, context, verifiable, not empty claims; 4) Role alignment: relevance of the experience to the target job description. The resume is given as numbered segments like [1], [2]. For each dimension give a one-sentence comment (in English, under 25 words) and one evidence_id (the segment number that best supports your comment, e.g. 3; use 0 if none). End with a 2-3 sentence overall assessment: one sentence on the biggest strength, one on the biggest weakness, one with the single highest-priority improvement — be direct. Return ONLY JSON, no other text. Format: {\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..}],\"overall\":\"..\"}. The dimensions array order is fixed: writing strength, quantification & results, experience specificity, role alignment. Score anchors (pick the band first, then the exact score; be strict — most resumes land 55-75): 90+ = exceptional, top 1%; 75-89 = strong with only minor flaws; 60-74 = average with clear weaknesses; 40-59 = weak with multiple issues; below 40 = poor.";
 }
-return "你是资深 HR。从四个维度给简历打分（0-100整数）：1)表达力度：是否用强动词、有ownership；2)量化与结果：数字、业务影响、结果导向；3)经历具体性：细节、上下文、可验证，不是空话；4)岗位匹配度：经历与目标岗位JD的相关性。每维度给一句话点评（中文，30字内）和一条原文证据（直接引用简历原话，不超过30字；实在找不到写空字符串）。最后2-3句话总评：亮点一句、最大短板一句、最优先改进建议一句，直接说结论。只返回 JSON，不要其他文字。格式：{\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"},{\"score\":..,\"comment\":\"..\",\"evidence\":\"..\"}],\"overall\":\"..\"}，dimensions 数组顺序固定为：表达力度、量化与结果、经历具体性、岗位匹配度。打分锚点（先定档位再给具体分数，严格一些，多数简历落在 55-75 分）：90+ 万里挑一；75-89 优秀，仅有小瑕疵；60-74 中等，有明显短板；40-59 较弱，多处硬伤；40以下 很差。";
+return "你是资深 HR。从四个维度给简历打分（0-100整数）：1)表达力度：是否用强动词、有ownership；2)量化与结果：数字、业务影响、结果导向；3)经历具体性：细节、上下文、可验证，不是空话；4)岗位匹配度：经历与目标岗位JD的相关性。简历已按编号分段（如 [1]、[2]）。每维度给一句话点评（中文，30字内）和一个 evidence_id（最能支撑你点评的段落编号，如 3；没有填 0）。最后2-3句话总评：亮点一句、最大短板一句、最优先改进建议一句，直接说结论。只返回 JSON，不要其他文字。格式：{\"dimensions\":[{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..},{\"score\":..,\"comment\":\"..\",\"evidence_id\":..}],\"overall\":\"..\"}，dimensions 数组顺序固定为：表达力度、量化与结果、经历具体性、岗位匹配度。打分锚点（先定档位再给具体分数，严格一些，多数简历落在 55-75 分）：90+ 万里挑一；75-89 优秀，仅有小瑕疵；60-74 中等，有明显短板；40-59 较弱，多处硬伤；40以下 很差。";
 }
 
 // Defense in depth: heuristics are only an early filter, not a proof that text is safe.
@@ -134,14 +134,27 @@ if (typeof env[key] === 'string' && env[key].length >= 8 && text.includes(env[ke
 const allowed = new Set(contactTokens(resume).map(s => s.replace(/[.,;:!?]+$/, '').toLowerCase()));
 if (contactTokens(text).some(s => !allowed.has(s.replace(/[.,;:!?]+$/, '').toLowerCase()))) throw new Error('unexpected model contact or URL');
 }
-function parseReviewOutput(text, resume, canary, env) {
+function parseReviewOutput(text, segments, canary, env) {
 const p = parseAiJson(text);
 if (!exactKeys(p, ['dimensions','overall']) || !Array.isArray(p.dimensions) || p.dimensions.length !== 4 || typeof p.overall !== 'string' || !p.overall.trim() || p.overall.length > 1000) throw new Error('invalid review');
+const resumeText = Array.isArray(segments) ? segments.join('\n') : String(segments || '');
 for (const d of p.dimensions) {
-if (!exactKeys(d, ['score','comment','evidence']) || !Number.isInteger(d.score) || d.score < 0 || d.score > 100 || typeof d.comment !== 'string' || !d.comment.trim() || d.comment.length > 400 || typeof d.evidence !== 'string' || d.evidence.length > 240) throw new Error('invalid review');
-if (d.evidence && !resume.replace(/\s+/g,' ').includes(d.evidence.replace(/\s+/g,' '))) throw new Error('invented evidence');
+// evidence_id: 引用编号（1-based），后端解析为原文；兼容旧的 evidence 自由文本
+const hasId = d.evidence_id !== undefined;
+if (!exactKeys(d, hasId ? ['score','comment','evidence_id'] : ['score','comment','evidence']) || !Number.isInteger(d.score) || d.score < 0 || d.score > 100 || typeof d.comment !== 'string' || !d.comment.trim() || d.comment.length > 400) throw new Error('invalid review');
+if (hasId) {
+const id = d.evidence_id;
+if (id !== 0 && (!Number.isInteger(id) || id < 1 || id > segments.length)) throw new Error('invalid review');
+d.evidence = id === 0 ? '' : segments[id - 1].slice(0, 120);
+delete d.evidence_id;
+} else {
+if (typeof d.evidence !== 'string' || d.evidence.length > 240) throw new Error('invalid review');
+// 宽松匹配：找不到原文也不直接拒收，置空证据（小模型转述常见）
+const norm = s => s.replace(/\s+/g, '');
+if (d.evidence && !norm(resumeText).includes(norm(d.evidence))) d.evidence = '';
 }
-assertSafeAiOutput([p.overall,...p.dimensions.flatMap(d => [d.comment,d.evidence])].join('\n'), resume, canary, env);
+}
+assertSafeAiOutput([p.overall,...p.dimensions.flatMap(d => [d.comment,d.evidence])].join('\n'), resumeText, canary, env);
 return p;
 }
 
@@ -760,19 +773,37 @@ return new Response('Not found',{status:404,headers:CORS});
 };
 
 function billingRuntime(){return createBilling({auth:getAuthUser,isAdmin:isAdminRequest,headers:CORS,validateAi:validateAiInput});}
+function numberResumeSegments(resume){
+const segs=String(resume||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+const out=[];
+for(const s of segs){
+// 再按句号/分号切，避免段落太长
+const parts=s.split(/(?<=[。；;.!?])\s*/).map(p=>p.trim()).filter(p=>p.length>3);
+if(parts.length<=1)out.push(s);else out.push(...parts);
+}
+return out.slice(0,60);
+}
+
 async function doReview(env,resume,jd,lang){
 if (!env.AI) throw new Error('AI binding missing');
+const segments=numberResumeSegments(resume);
+const numbered=segments.map((s,i)=>`[${i+1}] ${s}`).join('\n');
 const canary = 'checkats-guard-' + crypto.randomUUID();
-const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume,jobDescription:jd}, canary);
+const reviewMessages = buildAiMessages(dimSystemPrompt(lang), {resume:numbered,jobDescription:jd}, canary);
 let dimParsed = null;
 let model = "";
+let lastErr = null;
+// 每个模型各试一次：解析失败也切备用模型，不只靠 seed 重试
+for (const m of TEXT_MODELS) {
 for (let attempt = 0; attempt < 2; attempt++) {
-const r = await runText(env, reviewMessages, 2048, 0, 42 + attempt);
-model = r.model;
 try {
-dimParsed = parseReviewOutput(r.text, resume, canary, env);
+const r = await runTextOne(env, m, reviewMessages, 2048, 0, 42 + attempt);
+model = r.model;
+dimParsed = parseReviewOutput(r.text, segments, canary, env);
 break;
-} catch (_) { /* Retry once with the same trusted rules; never recycle a model's output as instructions. */ }
+} catch (e) { lastErr = e; }
+}
+if (dimParsed) break;
 }
 if (!dimParsed) throw new Error(lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试");
 const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
@@ -787,6 +818,16 @@ evidence: it.evidence,
 };
 });
 return { dimensions, overall: dimParsed.overall.trim(), model };
+}
+
+async function runTextOne(env, model, messages, maxTokens = 1024, temperature, seed) {
+const params = { messages, max_tokens: maxTokens, response_format: { type: 'json_object' } };
+if (typeof temperature === "number") params.temperature = temperature;
+if (typeof seed === "number") params.seed = seed;
+const out = await env.AI.run(model, params);
+const text = getText(out).trim();
+if (!text) throw new Error("empty response");
+return { text, model };
 }
 
 async function handleReview(request,env){

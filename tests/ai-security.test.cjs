@@ -36,12 +36,15 @@ test('both AI routes accept normal resumes, including security work, with fixed 
   for(const messages of [app.calls.review[0].messages,app.calls.rewrite[0].messages]){
    assert.deepEqual(Array.from(messages,m=>m.role),['system','user']);
    assert.ok(!messages[0].content.includes(input.resume));
-   assert.equal(JSON.parse(messages[1].content).untrustedDocumentData.resume,input.resume);
    assert.doesNotMatch(JSON.stringify(messages),/synthetic-(?:admin|provider|email)/);
   }
+  const reviewResume=JSON.parse(app.calls.review[0].messages[1].content).untrustedDocumentData.resume;
+  assert.ok(reviewResume.includes('[1]'));
+  assert.equal(JSON.parse(app.calls.rewrite[0].messages[1].content).untrustedDocumentData.resume,input.resume);
   assert.equal(app.calls.rewrite[0].response_format.type,'json_object');
   assert.equal(app.calls.rewrite[0].tools,undefined);
   assert.equal(app.calls.review[0].tools,undefined);
+  assert.equal(app.calls.review[0].response_format.type,'json_object');
  }
 });
 
@@ -99,12 +102,24 @@ test('quoted JSON and delimiter-looking text stay data; client model and keyword
  assert.equal(data.resume,input.resume);assert.ok(!sent.messages[0].content.includes('document example'));assert.ok(!sent.messages[0].content.includes('arbitrary policy'));
 });
 
-test('review rejects coercible or out-of-range scores, extra dimensions, unknown keys and invented evidence',async()=>{
- const changes=[p=>p.dimensions[0].score='100',p=>p.dimensions[0].score=101,p=>p.dimensions[0].score=-1,p=>p.dimensions[0].score=65.5,p=>p.dimensions.push(p.dimensions[0]),p=>p.tool_call='send-email',p=>p.dimensions[0].extra='run command',p=>p.dimensions[0].evidence='Led a fake company',p=>p.overall='',p=>p.dimensions[0].comment={}];
+test('review rejects coercible or out-of-range scores, extra dimensions and unknown keys',async()=>{
+ const changes=[p=>p.dimensions[0].score='100',p=>p.dimensions[0].score=101,p=>p.dimensions[0].score=-1,p=>p.dimensions[0].score=65.5,p=>p.dimensions.push(p.dimensions[0]),p=>p.tool_call='send-email',p=>p.dimensions[0].extra='run command',p=>p.overall='',p=>p.dimensions[0].comment={}];
  for(const change of changes){
   const p=goodReview();change(p);const app=setup({review:()=>p}),r=await app.request('hr-review');
-  assert.equal(r.status,502);assert.equal(r.payload.ok,false);assert.equal(r.payload.dimensions,undefined);assert.equal(app.calls.review.length,2);
+  assert.equal(r.status,502);assert.equal(r.payload.ok,false);assert.equal(r.payload.dimensions,undefined);assert.equal(app.calls.review.length,4);
  }
+});
+
+test('review accepts evidence_id citations and tolerates paraphrased evidence text',async()=>{
+ const withId=goodReview();
+ withId.dimensions.forEach((d,i)=>{d.evidence_id=i+1;delete d.evidence;});
+ const app=setup({review:()=>withId}),r=await app.request('hr-review');
+ assert.equal(r.status,200);assert.equal(r.payload.ok,true);
+ assert.equal(r.payload.dimensions[0].evidence,'Alex Example');
+ const paraphrased=goodReview();
+ paraphrased.dimensions[0].evidence='Led engineering teams informally';
+ const app2=setup({review:()=>paraphrased}),r2=await app2.request('hr-review');
+ assert.equal(r2.status,200);assert.equal(r2.payload.dimensions[0].evidence,'');
 });
 
 test('review rejects surrounding prose instead of extracting a convenient JSON substring',async()=>{
