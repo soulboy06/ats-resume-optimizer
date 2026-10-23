@@ -781,10 +781,17 @@ const r = await runTextOne(env, m, reviewMessages, 2048, 0, 42 + attempt);
 model = r.model;
 dimParsed = parseReviewOutput(r.text, resume, canary, env);
 break;
-} catch (e) { lastErr = e; }
+} catch (e) {
+lastErr = e;
+const msg = String((e && e.message) || e || '');
+if (/daily free allocation|10,000 neurons|429|quota|rate.limit/i.test(msg)) {
+throw new Error('QUOTA_EXCEEDED');
+}
+}
 }
 if (dimParsed) break;
 }
+if (lastErr && String((lastErr && lastErr.message) || '') === 'QUOTA_EXCEEDED') throw new Error(lang === "en" ? "Today's free AI quota is used up, please try again after 08:00 (Beijing time)" : "今日 AI 免费额度已用完，请明天 08:00 后再试");
 if (!dimParsed) throw new Error(lang === "en" ? "AI review failed to produce valid scores, please retry" : "AI 点评未能返回有效分数，请重试");
 const dimItems = Array.isArray(dimParsed.dimensions)? dimParsed.dimensions: [];
 const dimensions = DIMENSIONS.map((d, i) => {
