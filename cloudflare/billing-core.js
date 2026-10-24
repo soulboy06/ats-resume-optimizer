@@ -185,7 +185,14 @@ export function createBilling({auth,isAdmin,headers,validateAi}){
     await grant(db,{id:'period:'+o.id+':'+start,user:purchase.user_id,plan:'pass',points:2000,amount:1990,customer,sub:o.id,end,start,transaction:o.last_transaction_id,purchase:purchase.id,now});
    }
   }else if(['subscription.canceled','subscription.scheduled_cancel','subscription.expired','subscription.paused','subscription.update'].includes(type)){
-   const a=await prepare(db,'SELECT * FROM billing_accounts WHERE subscription_id=?',o.id).first();if(a){const end=Date.parse(o.current_period_end_date),status=type==='subscription.update'?o.status:type.slice('subscription.'.length);if(!Number.isFinite(end)||end>=a.period_end){if(status==='scheduled_cancel')await prepare(db,"UPDATE billing_accounts SET subscription_status='scheduled_cancel' WHERE user_id=? AND period_end>? AND subscription_status IN ('active','scheduled_cancel')",a.user_id,now).run();else if(['expired','paused','canceled'].includes(status))await prepare(db,"UPDATE billing_accounts SET subscription_status=?,period_end=MIN(period_end,?) WHERE user_id=?",status,now,a.user_id).run();}}
+   const a=await prepare(db,'SELECT * FROM billing_accounts WHERE subscription_id=?',o.id).first();if(a){const end=Date.parse(o.current_period_end_date),status=type==='subscription.update'?o.status:type.slice('subscription.'.length);if(!Number.isFinite(end)||end>=a.period_end){
+    // Creem's customer portal emits canceled immediately, with a future paid-through
+    // date. Canceling renewal must not erase that period or its remaining points.
+    // Retain only our already-paid end date; a state event cannot extend access or
+    // reactivate an order that a refund/expiry/pause has already revoked.
+    if(['scheduled_cancel','canceled'].includes(status))await prepare(db,"UPDATE billing_accounts SET subscription_status=? WHERE user_id=? AND period_end>? AND subscription_status IN ('active','scheduled_cancel','canceled')",status,a.user_id,now).run();
+    else if(['expired','paused'].includes(status))await prepare(db,"UPDATE billing_accounts SET subscription_status=?,period_end=MIN(period_end,?) WHERE user_id=?",status,now,a.user_id).run();
+   }}
   }else if(type==='refund.created'||type==='dispute.created'){
    /* Retain an auditable event; fulfillment is stopped for this order. A refund
       needs manual reconciliation when points have already been spent. */

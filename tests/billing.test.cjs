@@ -104,8 +104,15 @@ test('official string transaction IDs support refunds; failed and partial refund
  assert.equal((await a.db.prepare('SELECT reason FROM billing_payment_reviews').first()).reason,'partial_refund');
  await a.hook({id:'full-refund',eventType:'refund.created',object:{status:'succeeded',transaction:{id:'tran_pack',status:'refunded'}}});assert.equal((await a.route('/api/billing/account')).data.points.total,50);
 });
-test('scheduled cancellation through update preserves paid access, immediate cancellation stops it',async()=>{
+test('portal canceled events retain paid-through access and points until natural expiry',async()=>{
  const a=setup();await pending(a,'pass');await a.hook(subEvent(a));
  await a.hook({id:'schedule-update',eventType:'subscription.update',object:{id:'sub_a',status:'scheduled_cancel'}});assert.equal((await a.route('/api/billing/account')).data.entitlements.subscription,true);
- await a.hook({id:'cancel-immediate',eventType:'subscription.canceled',object:{id:'sub_a'}});assert.equal((await a.route('/api/billing/account')).data.entitlements.subscription,false);
+ const end=a.now()+30*86400000;
+ await a.hook({id:'portal-cancel',eventType:'subscription.canceled',object:{id:'sub_a',status:'canceled',current_period_end_date:new Date(end).toISOString()}});
+ let account=(await a.route('/api/billing/account')).data;assert.equal(account.entitlements.subscription,true);assert.equal(account.points.subscription,2000);assert.equal(account.points.permanent,50);assert.equal((await a.db.prepare("SELECT period_end FROM billing_accounts WHERE user_id='alice'").first()).period_end,end);
+ await a.hook({id:'cancel-update',eventType:'subscription.update',object:{id:'sub_a',status:'canceled',current_period_end_date:new Date(end+86400000).toISOString()}});assert.equal((await a.db.prepare("SELECT period_end FROM billing_accounts WHERE user_id='alice'").first()).period_end,end);
+ a.advance(30*86400000+1);account=(await a.route('/api/billing/account')).data;assert.equal(account.entitlements.subscription,false);assert.equal(account.points.subscription,0);assert.equal(account.points.permanent,50);assert.equal(account.ledger.filter(l=>l.kind==='expiration').length,1);
+});
+test('cancellation cannot restore refunded or paused subscriptions',async()=>{
+ for(const revoked of ['refunded','paused']){const a=setup();await pending(a,'pass');await a.hook(subEvent(a));if(revoked==='refunded')await a.hook({id:'refund-pass',eventType:'refund.created',object:{transaction:'tran_evt-sub'}});else await a.hook({id:'pause-pass',eventType:'subscription.paused',object:{id:'sub_a'}});await a.hook({id:'late-cancel',eventType:'subscription.canceled',object:{id:'sub_a'}});assert.equal((await a.route('/api/billing/account')).data.entitlements.subscription,false);assert.equal((await a.db.prepare("SELECT subscription_status FROM billing_accounts WHERE user_id='alice'").first()).subscription_status,revoked);}
 });
