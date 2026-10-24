@@ -21,6 +21,7 @@
   var REDIRECT_TO = "https://checkats.online/";
 
   var listeners = [];
+  var refreshPromise = null, refreshRetryAt = 0;
   var OTP_KEY = STORAGE_KEY + '-email-verification';
   var RECOVERY_KEY = STORAGE_KEY + '-recovery-session';
   var pendingMemory = null, recoveryMemory = null, verificationVersion = 0;
@@ -108,6 +109,7 @@
   }
 
   function saveSession(s) {
+    refreshRetryAt = 0;
     try {
       if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       else localStorage.removeItem(STORAGE_KEY);
@@ -346,29 +348,66 @@
     return hs;
   }
 
-  async function refreshSession() {
+  function sameSession(a, b) {
+    return !!a && !!b && a.access_token === b.access_token && a.refresh_token === b.refresh_token;
+  }
+
+  async function refreshStoredSession() {
+    // Re-read inside the cross-tab lock: another tab may already have rotated it.
     var s = loadSession();
-    if (!s || !s.refresh_token) return null;
+    if (!s || !isExpired(s)) return s;
+    if (!s.refresh_token) return null;
+    if (Date.now() < refreshRetryAt) return s;
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timeout = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
     try {
       var r = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
         method: "POST",
         headers: baseHeaders(),
-        body: JSON.stringify({ refresh_token: s.refresh_token })
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+        signal: controller ? controller.signal : undefined
       });
-      if (!r.ok) { saveSession(null); emit("SIGNED_OUT", null); return null; }
-      var data = await r.json();
+      var data = await r.json().catch(function () { return {}; });
+      // A delayed response must never erase a newer login, logout or refresh.
+      var current = loadSession();
+      if (!sameSession(current, s)) return current;
+      if (!r.ok) {
+        var code = data.error_code || data.code || data.error;
+        var invalid = ['refresh_token_not_found', 'refresh_token_already_used', 'session_not_found', 'session_expired', 'invalid_grant'].indexOf(code) !== -1;
+        if ((r.status === 400 || r.status === 401 || r.status === 403) && invalid) {
+          saveSession(null); emit('SIGNED_OUT', null); return null;
+        }
+        refreshRetryAt = Date.now() + 30000;
+        return s;
+      }
       var ns = toSession(data);
-      if (!ns) { saveSession(null); return null; }
+      if (!ns || !ns.refresh_token) { refreshRetryAt = Date.now() + 30000; return s; }
       if (!ns.user) ns.user = s.user;
       saveSession(ns);
+      emit('TOKEN_REFRESHED', ns);
       return ns;
-    } catch (e) { return s; } // network hiccup: keep old session, let API call decide
+    } catch (e) {
+      refreshRetryAt = Date.now() + 30000;
+      return loadSession();
+    } finally { if (timeout !== null) clearTimeout(timeout); }
+  }
+
+  function refreshSession() {
+    if (refreshPromise) return refreshPromise;
+    var locks = window.navigator && window.navigator.locks;
+    var operation = locks ? locks.request(STORAGE_KEY + '-refresh', refreshStoredSession) : refreshStoredSession();
+    refreshPromise = Promise.resolve(operation).finally(function () { refreshPromise = null; });
+    return refreshPromise;
   }
 
   function getSession() {
     var s = loadSession();
     if (!s) return null;
-    if (isExpired(s)) return null; // use getAccessToken() for auto-refresh
+    // Identity is display-only. API authorization always uses getAccessToken().
+    if (isExpired(s)) {
+      if (!s.refresh_token) return null;
+      refreshSession().catch(function () {});
+    }
     return s;
   }
 
@@ -377,6 +416,7 @@
     if (!s) return null;
     if (!isExpired(s)) return s.access_token;
     var ns = await refreshSession();
+    if (ns && isExpired(ns)) throw authError('session-refresh-unavailable');
     return ns ? ns.access_token : null;
   }
 
@@ -424,6 +464,10 @@
     cancelEmailVerification();cancelRecovery();
     try { sessionStorage.removeItem("checkats_recovery"); } catch (e) {}
     var s = loadSession();
+    // Clear immediately so an in-flight refresh cannot resurrect this session.
+    saveSession(null);
+    try { localStorage.removeItem(PKCE_KEY); } catch (e) {}
+    emit("SIGNED_OUT", null);
     if (s && s.access_token) {
       try {
         await fetch(SUPABASE_URL + "/auth/v1/logout", {
@@ -432,9 +476,6 @@
         });
       } catch (e) {}
     }
-    saveSession(null);
-    try { localStorage.removeItem(PKCE_KEY); } catch (e) {}
-    emit("SIGNED_OUT", null);
   }
 
   function onAuthStateChange(cb) {
@@ -467,4 +508,25 @@
       return SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0;
     }
   };
+
+  function resumeSession() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    var s = loadSession();
+    if (s && isExpired(s)) refreshSession().catch(function () {});
+  }
+  if (window.addEventListener) {
+    window.addEventListener('focus', resumeSession);
+    window.addEventListener('pageshow', resumeSession);
+    window.addEventListener('online', function () { refreshRetryAt = 0; resumeSession(); });
+    window.addEventListener('storage', function (event) {
+      if (event.key !== STORAGE_KEY && event.key !== null) return;
+      var s = loadSession();
+      emit(s ? 'SIGNED_IN' : 'SIGNED_OUT', s);
+      resumeSession();
+    });
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', resumeSession);
+    // Background tabs can be throttled; focus/pageshow also resume on return.
+    window.setInterval(resumeSession, 30000);
+    resumeSession();
+  }
 })();
