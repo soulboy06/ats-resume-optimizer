@@ -8,6 +8,12 @@
 - [Scoring method and data handling](https://checkats.online/methodology/): current formula, rules, limits, worked example, and external processing.
 - [Resume guides](https://checkats.online/guide/): published resume resources.
 - [Software engineer checklist](https://checkats.online/guide/ats-resume-checklist-software-engineers/): practical advice with product limitations and a vendor source.
+- [PDF Resume Studio](https://checkats.online/studio/): 30 templates, local Typst rendering, no watermark, native-text PDF output.
+- [Account and plans](https://checkats.online/account/?tab=plans): points balance, saved jobs (up to 20), check-in, and purchase options.
+- [CheckATS vs Jobscan](https://checkats.online/guide/checkats-vs-jobscan/): free ATS checker comparison.
+- [CheckATS vs Resume Worded](https://checkats.online/guide/checkats-vs-resume-worded/): which free ATS check shows its work.
+- [CheckATS vs Teal](https://checkats.online/guide/checkats-vs-teal/): no-signup ATS check vs all-in-one tracker.
+- [Free Jobscan alternative](https://checkats.online/guide/free-jobscan-alternative/): ATS resume check with no signup.
 
 ## Facts and limits
 
@@ -19,3 +25,14 @@
 - Logged-in users spend points: 10 per AI review, 20 per AI rewrite (includes one free review of the rewritten resume). Email verification earns 50 permanent points; daily check-in earns 10. Anonymous visitors are limited by IP: 5 review requests and 2 rewrite requests per UTC day. Automatic review refreshes also consume requests; shared networks share allowances.
 - Local checks do not upload the resume. Optional AI review and rewrite send it to external providers; email delivery uses Resend. See the methodology page for data handling.
 - CheckATS is not affiliated with Greenhouse, Workday, or other ATS vendors. Their features and employer configurations differ.
+
+## Pricing
+- Pack: one-time USD 9.90 for 800 permanent points.
+- Pass: USD 19.90 per billing period for 2,000 points per period.
+- PDF export requires a paid purchase (premium).
+- Payments are processed by Creem; checkout is currently in test mode.
+
+## PDF Studio
+- 30 templates across single- and two-column layouts, adapted from davidculemann/typst-templates (MIT-0).
+- Rendering is local via Typst; photos are not sent to AI.
+- Drafts use browser session storage; no template guarantees compatibility with every employer's parser.

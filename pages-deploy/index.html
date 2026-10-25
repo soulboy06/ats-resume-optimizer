@@ -68,6 +68,36 @@
         "Optional AI resume review",
         "Optional AI resume rewrite"
       ]
+    }    ,
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Where is my resume processed?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Local keyword matching and text checks run in your browser tab. Optional AI review and rewrite send your resume and job description for external processing only when requested."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is this the same score every ATS uses?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. There is no universal ATS score. This directional simulation combines exact words from the job description with four raw-text parseability checks; a separate AI review assesses writing quality."}
+        },
+        {
+          "@type": "Question",
+          "name": "Does the demo use AI?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. AI Deep Review uses Qwen through SiliconFlow (with Cloudflare Workers AI as fallback), and AI Rewrite uses DeepSeek through the same server-side Worker. No API key is entered in the browser."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can it read a PDF?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Choose a text-based PDF and the tool extracts its text in your browser. Image-only scanned PDFs require OCR, which is not included."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is CheckATS free, and do I need an account?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Basic ATS checks are free without an account. AI requires login: 10 points per review, 20 per rewrite (includes a free review of the rewritten resume). Email verification earns 50 permanent points, and daily check-in earns 10. PDF export requires a paid purchase."}
+        }
+      ]
     }
   ]
 }
