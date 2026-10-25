@@ -15,7 +15,7 @@
 - A skills dictionary selects JD terms; statistical extraction supplements thin matches or acts as a fallback. Matching ignores case but does not expand synonyms or acronyms.
 - The four text checks test email presence, supported date formats, clean characters, and 300–3,000 non-whitespace characters. They do not inspect the original document layout or recognize every valid date format.
 - Text-based PDF import runs locally; scanned PDFs need OCR, which is not included. DOCX upload is not supported.
-- Optional AI review assesses writing, results, specificity, and role alignment separately from the local score. AI outputs may vary and can be inaccurate.
-- Standard AI allowances are 5 review requests and 2 rewrite requests per IP per UTC day. Automatic review refreshes also consume requests; shared networks share allowances.
+- Optional AI review assesses writing, results, specificity, and role alignment separately from the local score. Review uses Qwen through SiliconFlow first, with Cloudflare Workers AI as fallback; rewrite uses DeepSeek. AI outputs may vary and can be inaccurate.
+- Logged-in users spend points: 10 per AI review, 20 per AI rewrite (includes one free review of the rewritten resume). Email verification earns 50 permanent points; daily check-in earns 10. Anonymous visitors are limited by IP: 5 review requests and 2 rewrite requests per UTC day. Automatic review refreshes also consume requests; shared networks share allowances.
 - Local checks do not upload the resume. Optional AI review and rewrite send it to external providers; email delivery uses Resend. See the methodology page for data handling.
 - CheckATS is not affiliated with Greenhouse, Workday, or other ATS vendors. Their features and employer configurations differ.
