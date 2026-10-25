@@ -31,6 +31,12 @@ Creem 要求两项修改：明确禁止 AI 点评与改写中的色情/露骨性
 
 证据：`output/playwright/creem/rereview-terms-live-en.png`、`rereview-submitted-20261025.png`。
 
+### 同日第二次运营者信息整改
+
+后续同日再次收到整改通知，仅列出运营者身份问题。已现场核对：上次发布的条款仍显示 `weishu yao`，且与 Creem 商店设置的全名完全一致；因此没有证据证明上次部署丢失，也不能确定审核员未接受的具体原因。本次进一步把品牌和 `Legal operator: weishu yao` / `法定运营者：weishu yao` 写入 27 个页面的静态 HTML 页脚，并保留 JavaScript 的语言切换增强。首页无需打开政策页即可找到姓名，页面抓取也不依赖脚本生成页脚。
+
+已在现有 Pages 项目完成部署，并在正式域名首页实际核对英文和中文页脚。再次勾选已修复的运营者问题并提交复审，Creem 收款账户页显示“审核中”。证据：`operator-home-footer-live.png`、`operator-footer-rereview-submitted.png`（位于本地 `output/playwright/creem/`）。审核通过与正式收款仍未完成。
+
 ### 审核通过后
 
 1. 等待当前商店审核结果；如要求补充身份资料，由用户本人操作。审核通过须以后台实际状态为准。

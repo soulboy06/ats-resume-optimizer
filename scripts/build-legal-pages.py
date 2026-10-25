@@ -1,6 +1,7 @@
 """Build bilingual, static support and policy pages from reviewed product behaviour."""
 from pathlib import Path
 from html import escape
+import re
 
 ROOT = Path(__file__).resolve().parents[1] / 'pages-deploy'
 PAGES = {
@@ -54,3 +55,24 @@ for slug, (en, zh, sections) in PAGES.items():
   dest.parent.mkdir(parents=True, exist_ok=True)
   dest.write_text(html, encoding='utf-8')
 print('Built 8 bilingual policy and support pages.')
+
+# Publish the legal operator in the HTML itself, including the homepage.
+# The footer script only enhances language switching; it is not required to see it.
+footer_pages = 0
+for page in ROOT.rglob('*.html'):
+ content = page.read_text(encoding='utf-8')
+ if '/scripts/site-footer.js' not in content:
+  continue
+ zh = bool(re.search(r'<html\b[^>]*\blang=[\"\']zh', content, re.I))
+ prefix = '/zh' if zh else ''
+ names = [('terms', '服务条款' if zh else 'Terms'), ('privacy', '隐私政策' if zh else 'Privacy'), ('refunds', '退款政策' if zh else 'Refunds'), ('contact', '联系支持' if zh else 'Contact')]
+ footer_links = ''.join(f'<a href="{prefix}/{slug}/">{title}</a>' for slug, title in names)
+ operator = '法定运营者：weishu yao' if zh else 'Legal operator: weishu yao'
+ static_footer = f'<footer class="site-policy-footer"><span>CheckATS · soulboytools</span><span class="site-operator">{operator}</span><nav aria-label="{"政策与支持" if zh else "Policies and support"}">{footer_links}</nav></footer>'
+ content = re.sub(r'<footer\b[^>]*class="site-policy-footer"[^>]*>.*?</footer>\s*', '', content, flags=re.S)
+ content = re.sub(r'<script src="/scripts/site-footer\.js[^\"]*"></script>', static_footer + '<script src="/scripts/site-footer.js?v=20261025-operator"></script>', content)
+ if 'href="/styles/legal.css"' not in content:
+  content = content.replace('</head>', '<link rel="stylesheet" href="/styles/legal.css"></head>', 1)
+ page.write_text(content, encoding='utf-8')
+ footer_pages += 1
+print(f'Published static operator footers on {footer_pages} pages.')
